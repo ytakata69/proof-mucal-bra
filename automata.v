@@ -261,7 +261,7 @@ Proof.
   rewrite EQxv; auto.
 Qed.
 
-Lemma tt_Var_omega_FinalA :
+Lemma Vtt_Var_omega_FinalA :
   forall x,
   x = Vtt \/ Var_omega x = true ->
   FinalA sigma (sigma x).
@@ -334,24 +334,31 @@ Proof.
   apply moveStar_refl.
 Qed.
 
-(*
-Hypothesis tt_Vtt : forall v,
-  sigma v = (φ [tt]) -> v = Vtt.
-
-Hypothesis Var_omega_Vtt :
-  Var_omega Vtt = true.
-
-Hypothesis sigma_Var_omega :
-  forall v1 v2,
-  sigma v1 = sigma v2 ->
-  Var_omega v1 = true ->
-  Var_omega v2 = true.
-*)
-
 Hypothesis sigma_injective_on_Var_omega :
   forall v1 v2,
   Var_omega v1 = true ->
   sigma v1 = sigma v2 -> v1 = v2.
+
+Lemma FinalA_tt_Var_omega :
+  forall x,
+  FinalA sigma (sigma x) <->
+  sigma x = (φ [tt]) \/ Var_omega x = true.
+Proof.
+  intro x.
+  split; intro H.
+  - inversion H as [Hsx|v Hv Hvx].
+  + now left.
+  + right.
+  apply sigma_injective_on_Var_omega with v x in Hv as EQvx;
+  auto.
+  now rewrite <- EQvx.
+  - destruct H as [H | H].
+  + rewrite <- sigma_Vtt with sigma in H.
+  rewrite H.
+  rewrite sigma_Vtt;
+  apply FinalA_TT.
+  + now apply FinalA_Var_omega.
+Qed.
 
 Lemma EqnBRA_leq_sigma_fin :
   forall x v i j theta theta',
@@ -530,5 +537,20 @@ Proof.
   now apply models_fin_TT.
 Qed.
 
+Theorem sigma_fin_eq_EqnBRA :
+  forall x v i j theta theta',
+  (exists ell : nat,
+    (i, theta; j, theta', x |= Fpow_emp sigma ell, var v)) <->
+  moveStar (A:=A) (sigma v, theta, i) (sigma x, theta', j) /\
+  (x = Vtt \/ Var_omega x = true).
+Proof.
+  intros x v i j theta theta'.
+  split; intro H.
+  - split.
+  + now apply sigma_fin_leq_EqnBRA.
+  + now apply x_is_either_tt_or_Var_omega with v i j theta theta'.
+  - destruct H as [H1 H2].
+  now apply EqnBRA_leq_sigma_fin.
+Qed.
 
 End CorrectnessOfEqnBRA.
