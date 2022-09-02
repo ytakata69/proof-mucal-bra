@@ -339,27 +339,6 @@ Hypothesis sigma_injective_on_Var_omega :
   Var_omega v1 = true ->
   sigma v1 = sigma v2 -> v1 = v2.
 
-Lemma FinalA_tt_Var_omega :
-  forall x,
-  FinalA sigma (sigma x) <->
-  sigma x = (φ [tt]) \/ Var_omega x = true.
-Proof.
-  intro x.
-  split; intro H.
-  - inversion H as [Hsx|v Hv Hvx].
-  + now left.
-  + right.
-  apply sigma_injective_on_Var_omega with v x in Hv as EQvx;
-  auto.
-  now rewrite <- EQvx.
-  - destruct H as [H | H].
-  + rewrite <- sigma_Vtt with sigma in H.
-  rewrite H.
-  rewrite sigma_Vtt;
-  apply FinalA_TT.
-  + now apply FinalA_Var_omega.
-Qed.
-
 Lemma EqnBRA_leq_sigma_fin :
   forall x v i j theta theta',
   moveStar (A:=A) (sigma v, theta, i) (sigma x, theta', j) ->
