@@ -97,7 +97,7 @@ Inductive models_phi
     -> models_phi i theta (AND_phi p1 p2)
   .
 
-Inductive models (u : Env)
+CoInductive models (u : Env)
   : nat -> Theta -> ltl -> Prop :=
   | models_var : forall i j theta theta' x v,
       u v i j theta theta' x ->

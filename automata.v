@@ -107,6 +107,8 @@ Inductive FinalA (sigma : eqn_sys)
 Definition EqnBRA (sigma : eqn_sys) :=
   mk_automaton ltl (RuleA sigma) (FinalA sigma).
 
+(* ------------------------------ *)
+
 Section CorrectnessOfEqnBRA.
 
 Variable sigma : eqn_sys.
@@ -217,6 +219,81 @@ Proof.
   + apply IH with q3 th3 q2 th2; auto.
 Qed.
 
+Lemma state_is_sigma_v :
+  forall v q i j theta theta',
+  moveStar (A:=A) (sigma v, theta, i) (q, theta', j) ->
+  exists x, q = sigma x.
+Proof.
+  intros v q i j theta theta' H.
+  remember (sigma v, theta, i) as c1 eqn: EQc1.
+  remember (q, theta', j) as c2 eqn: EQc2.
+  generalize dependent theta;
+  generalize dependent i;
+  generalize dependent v.
+  induction H as [| c1 c3 c2 Hmov Hstar IH];
+  intros v i theta EQc1.
+  - exists v.
+  rewrite EQc2 in EQc1.
+  inversion EQc1;
+  reflexivity.
+  - specialize (IH EQc2).
+  rewrite EQc1 in Hmov;
+  rewrite EQc2 in Hstar;
+  clear c1 EQc1 c2 EQc2.
+  destruct c3 as [[q3 th3] i3].
+  inversion Hmov
+  as [phi R i1 q1 q2 th Ht Hm [EQq1 EQth EQi1] [EQq2 EQth3 EQi3]
+     |i1 q1 q2 th Ht [EQq1 EQth EQi1] [EQq2 EQth3 EQi3]].
+  + inversion Ht as [EQsv EQphi EQR EQq3| | |R1 v1 p1 EQsv EQphi EQR EQq3].
+  * rewrite EQq3 in EQsv.
+  rewrite EQsv in IH.
+  specialize (IH v i3 th3 (refl_equal (sigma v, th3, i3))).
+  apply IH.
+  * rewrite <- EQq3 in IH.
+  specialize (IH v1 i3 th3 (refl_equal (sigma v1, th3, i3))).
+  apply IH.
+  + inversion Ht as [| v1 v2 EQsv EQeps EQnil EQq3| v1 v2 EQsv EQeps EQnil EQq3|];
+  clear EQeps EQnil;
+  rewrite <- EQq3 in IH.
+  * specialize (IH v1 i3 th3 (refl_equal (sigma v1, th3, i3))).
+  apply IH.
+  * specialize (IH v2 i3 th3 (refl_equal (sigma v2, th3, i3))).
+  apply IH.
+Qed.
+
+
+Hypothesis sigma_injective_on_Var_omega :
+  forall v1 v2,
+  Var_omega v1 = true ->
+  sigma v1 = sigma v2 -> v1 = v2.
+
+Hypothesis tt_Vtt_or_Var_omega : forall v,
+  sigma v = (φ [tt]) ->
+  v = Vtt \/ Var_omega v = true.
+
+Lemma FinalA_tt_Var_omega :
+  forall x,
+  FinalA sigma (sigma x) <->
+  x = Vtt \/ Var_omega x = true.
+Proof.
+  intro x.
+  split; intro H.
+  - inversion H as [Hsx|v Hv Hvx].
+  + symmetry in Hsx.
+  now apply tt_Vtt_or_Var_omega in Hsx.
+  + right.
+  apply sigma_injective_on_Var_omega with v x in Hv as EQvx;
+  auto.
+  now rewrite <- EQvx.
+  - destruct H as [H | H].
+  + rewrite H.
+  rewrite sigma_Vtt;
+  apply FinalA_TT.
+  + now apply FinalA_Var_omega.
+Qed.
+
+(* ------------------------------ *)
+
 Hypothesis Hnormal :
   forall v : Var, isNormal (sigma v).
 
@@ -259,19 +336,6 @@ Proof.
   + (* When Var_omega v = true /\ x = v *)
   destruct Hm as [Homega [EQxv _]].
   rewrite EQxv; auto.
-Qed.
-
-Lemma Vtt_Var_omega_FinalA :
-  forall x,
-  x = Vtt \/ Var_omega x = true ->
-  FinalA sigma (sigma x).
-Proof.
-  intros x [H | H].
-  - rewrite H.
-  rewrite sigma_Vtt;
-  apply FinalA_TT.
-  - apply FinalA_Var_omega;
-  assumption.
 Qed.
 
 Lemma sigma_fin_leq_EqnBRA :
@@ -333,11 +397,6 @@ Proof.
   rewrite EQth;
   apply moveStar_refl.
 Qed.
-
-Hypothesis sigma_injective_on_Var_omega :
-  forall v1 v2,
-  Var_omega v1 = true ->
-  sigma v1 = sigma v2 -> v1 = v2.
 
 Lemma EqnBRA_leq_sigma_fin :
   forall x v i j theta theta',
@@ -521,15 +580,57 @@ Theorem sigma_fin_eq_EqnBRA :
   (exists ell : nat,
     (i, theta; j, theta', x |= Fpow_emp sigma ell, var v)) <->
   moveStar (A:=A) (sigma v, theta, i) (sigma x, theta', j) /\
-  (x = Vtt \/ Var_omega x = true).
+  FinalA sigma (sigma x).
 Proof.
   intros x v i j theta theta'.
   split; intro H.
   - split.
   + now apply sigma_fin_leq_EqnBRA.
-  + now apply x_is_either_tt_or_Var_omega with v i j theta theta'.
+  + apply FinalA_tt_Var_omega.
+  now apply x_is_either_tt_or_Var_omega with v i j theta theta'.
   - destruct H as [H1 H2].
+  apply FinalA_tt_Var_omega in H2.
   now apply EqnBRA_leq_sigma_fin.
+Qed.
+
+Lemma sigma_fin_ell_leq_EqnBRA :
+  forall ell x v i j theta theta',
+  (i, theta; j, theta', x |= Fpow_emp sigma ell, var v) ->
+  moveStar (A:=A) (sigma v, theta, i) (sigma x, theta', j) /\
+  FinalA sigma (sigma x).
+Proof.
+  intros ell x v i j theta theta' H.
+  split.
+  + apply sigma_fin_leq_EqnBRA;
+  now exists ell.
+  + apply FinalA_tt_Var_omega.
+  apply x_is_either_tt_or_Var_omega with v i j theta theta';
+  now exists ell.
+Qed.
+
+(* ------------------------------ *)
+
+Parameter lfpF : Env.
+Hypothesis lfpF_is_upperbound :
+  forall ell v i j theta theta' x,
+  Fpow_emp sigma ell v i j theta theta' x ->
+  lfpF v i j theta theta' x.
+
+Lemma acceptingLoop_leq_sigma :
+  forall v i theta,
+  acceptingLoop (A:=A) (sigma v, theta, i) ->
+  (i, theta |= lfpF, var v).
+Proof.
+  cofix Hcofix.
+  intros v i theta H.
+  inversion H as [q th1 th2 i1 j Hf Hij Hstar Ha [EQqc1 EQth1 EQi1]].
+  apply EqnBRA_leq_sigma_fin in Hstar as Hm1.
+  - destruct Hm1 as [ell Hm1].
+  inversion_clear Hm1 as [i2 j1 th3 th4 x v1 Hij' HF | | | |].
+  apply models_var with j th2 v; try assumption.
+  + now apply lfpF_is_upperbound with ell.
+  + now apply Hcofix.
+  - now apply FinalA_tt_Var_omega.
 Qed.
 
 End CorrectnessOfEqnBRA.
