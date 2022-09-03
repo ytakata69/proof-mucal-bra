@@ -244,16 +244,6 @@ Proof.
   apply IH.
 Qed.
 
-
-Hypothesis sigma_injective_on_Var_omega :
-  forall v1 v2,
-  Var_omega v1 = true ->
-  sigma v1 = sigma v2 -> v1 = v2.
-
-Hypothesis tt_Vtt_or_Var_omega : forall v,
-  sigma v = (φ [tt]) ->
-  v = Vtt \/ Var_omega v = true.
-
 Lemma FinalA_tt_Var_omega :
   forall x,
   FinalA sigma (sigma x) <->
@@ -265,7 +255,7 @@ Proof.
   + symmetry in Hsx.
   now apply tt_Vtt_or_Var_omega in Hsx.
   + right.
-  apply sigma_injective_on_Var_omega with v x in Hv as EQvx;
+  apply sigma_injective_on_Var_omega with sigma v x in Hv as EQvx;
   auto.
   now rewrite <- EQvx.
   - destruct H as [H | H].
@@ -523,7 +513,7 @@ Proof.
   rewrite <- EQtheta'.
   assert (Hx : x = Vtt).
   { destruct Hf as [Hf | Hf]; auto.
-    apply sigma_injective_on_Var_omega;
+    apply sigma_injective_on_Var_omega with sigma;
     auto.
     rewrite EQsx.
     now rewrite sigma_Vtt.
@@ -579,12 +569,6 @@ Qed.
 
 (* ------------------------------ *)
 
-Parameter lfpF : Env.
-Hypothesis lfpF_is_upperbound :
-  forall ell v i j theta theta' x,
-  Fpow_emp sigma ell v i j theta theta' x ->
-  lfpF v i j theta theta' x.
-
 Lemma acceptingLoop_leq_sigma :
   forall v i theta,
   acceptingLoop (A:=A) (sigma v, theta, i) ->
@@ -597,7 +581,7 @@ Proof.
   - destruct Hm1 as [ell Hm1].
   inversion_clear Hm1 as [i2 j1 th3 th4 x v1 Hij' HF | | | |].
   apply models_var with j th2 v; try assumption.
-  + now apply lfpF_is_upperbound with ell.
+  + now apply lfpF_is_upperbound with sigma ell.
   + now apply Hcofix.
   - now apply FinalA_tt_Var_omega.
 Qed.
@@ -620,7 +604,7 @@ Proof.
   apply models_var with j th2 x; try assumption.
   apply EqnBRA_leq_sigma_fin in Hstar.
   - destruct Hstar as [ell Hstar].
-  apply lfpF_is_upperbound with ell.
+  apply lfpF_is_upperbound with sigma ell.
   inversion Hstar;
   assumption.
   - apply FinalA_tt_Var_omega.

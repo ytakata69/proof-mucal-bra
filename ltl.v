@@ -232,9 +232,25 @@ Fixpoint Fpow (sigma : eqn_sys) (i : nat) (u : Env) : Env :=
   end.
 Definition Fpow_emp sigma i := Fpow sigma i empty_env.
 
+Parameter lfpF : Env.
+Axiom lfpF_is_upperbound :
+  forall (sigma : eqn_sys) ell v i j theta theta' x,
+  Fpow_emp sigma ell v i j theta theta' x ->
+  lfpF v i j theta theta' x.
+
 (* The meaning of Vtt *)
 Axiom sigma_Vtt : forall sigma : eqn_sys,
   sigma Vtt = (φ [tt]).
+
+Axiom tt_Vtt_or_Var_omega :
+  forall (sigma : eqn_sys) (v : Var),
+  sigma v = (φ [tt]) ->
+  v = Vtt \/ Var_omega v = true.
+
+Axiom sigma_injective_on_Var_omega :
+  forall (sigma : eqn_sys) (v1 v2 : Var),
+  Var_omega v1 = true ->
+  sigma v1 = sigma v2 -> v1 = v2.
 
 (* Normalized LTL formulas *)
 
