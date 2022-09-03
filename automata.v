@@ -80,6 +80,21 @@ Inductive accepting {A : automaton} : config A -> Prop :=
     acceptingLoop (q2, th2, j) ->
     accepting (q1, th1, i).
 
+CoInductive acceptingLoop' {A : automaton} : config A -> Prop :=
+  acceptingLoop'_intro : forall q1 q2 th1 th2 i j,
+    finals A q1 -> finals A q2 ->
+    i < j ->
+    moveStar (q1, th1, i) (q2, th2, j) ->
+    acceptingLoop' (q2, th2, j) ->
+    acceptingLoop' (q1, th1, i).
+
+Inductive accepting' {A : automaton} : config A -> Prop :=
+  accepting'_intro : forall q1 q2 th1 th2 i j,
+    i < j ->
+    moveStar (q1, th1, i) (q2, th2, j) ->
+    acceptingLoop' (q2, th2, j) ->
+    accepting' (q1, th1, i).
+
 (* Conversion from Eqn into BRA *)
 
 Inductive RuleA (sigma : eqn_sys)
@@ -270,37 +285,32 @@ Qed.
 Hypothesis Hnormal :
   forall v : Var, isNormal (sigma v).
 
-Lemma x_is_either_tt_or_Var_omega :
-  forall x v i j theta theta',
-  (exists ell : nat,
-    (i, theta; j, theta', x |= Fpow_emp sigma ell, var v)) ->
+Lemma Fpow_emp_x_tt_Var_omega :
+  forall ell x v i j theta theta',
+  Fpow_emp sigma ell v i j theta theta' x ->
   x = Vtt \/ Var_omega x = true.
 Proof.
-  intros x v i j theta theta';
-  intros [ell H];
-  revert x v i j theta theta' H.
-  induction ell as [| n IHn].
+  unfold Fpow_emp.
+  intros ell x.
+  induction ell as [| n IHn];
+  intros v i j theta theta' H.
   - (* When ell = 0 *)
-  unfold Fpow_emp.
-  unfold Fpow.
-  intros x v i j theta theta' H.
-  inversion_clear H as [i1 j1 t1 t2 x1 v1 _ Hu| | | |].
-  inversion Hu.
+  unfold Fpow in H;
+  inversion H.
   - (* When ell = S n *)
-  unfold Fpow_emp.
-  intros x v i j theta theta' H.
-  inversion_clear H as [i1 j1 t1 t2 x1 v1 Hij Hu| | | |].
-  inversion Hu as [Hm | Hm].
+  inversion H as [Hm | Hm].
   + (* When (i,theta;j,theta',x |= sigma v) *)
   assert (Hn := Hnormal v).
   destruct Hn as [v1 v2 | R v1 phi |].
   * (* When sigma v = var v1 .\/ var v2 *)
   inversion_clear Hm as [| i1 i2 t1 t2 x1 p1 p2 _ Hm' | | |].
-  destruct Hm' as [Hm' | Hm'].
+  destruct Hm' as [Hm' | Hm'];
+  inversion Hm'.
   -- now apply IHn with v1 i j theta theta'.
   -- now apply IHn with v2 i j theta theta'.
   * (* When sigma v = ↓ R ,X var v1 ../\ phi *)
-  inversion Hm;
+  inversion_clear Hm as [| | i1 i2 t1 t2 x1 R1 p1 p2 Hij Hp Hm'| |];
+  inversion Hm';
   now apply IHn with v1 (S i) j (updateR theta R (snd (Str_nth i w))) theta'.
   * (* When sigma v = φ [tt] *)
   inversion Hm;
@@ -309,6 +319,17 @@ Proof.
   + (* When Var_omega v = true /\ x = v *)
   destruct Hm as [Homega [EQxv _]].
   rewrite EQxv; auto.
+Qed.
+
+Lemma x_is_either_tt_or_Var_omega :
+  forall x v i j theta theta',
+  (exists ell : nat,
+    (i, theta; j, theta', x |= Fpow_emp sigma ell, var v)) ->
+  x = Vtt \/ Var_omega x = true.
+Proof.
+  intros x v i j theta theta' [ell H].
+  apply Fpow_emp_x_tt_Var_omega with ell v i j theta theta'.
+  now inversion H.
 Qed.
 
 Lemma sigma_fin_leq_EqnBRA :
@@ -609,6 +630,52 @@ Proof.
   assumption.
   - apply FinalA_tt_Var_omega.
   now inversion Ha.
+Qed.
+
+Lemma sigma_leq_acceptingLoop' :
+  forall v i theta,
+  (i, theta |= lfpF, var v) ->
+  (v = Vtt \/ Var_omega v = true) ->
+  acceptingLoop' (A:=A) (sigma v, theta, i).
+Proof.
+  cofix Hcofix.
+  intros v i theta H Hf.
+  inversion H as [i1 j th1 th2 x v1 HF Hij Hchain EQi1 EQth1 EQv1 | | |];
+  clear i1 EQi1 th1 EQth1 v1 EQv1.
+  apply lfpF_is_sup with sigma v i j theta th2 x in HF;
+  destruct HF as [ell HF].
+  apply Fpow_emp_x_tt_Var_omega in HF as Hfx;
+  apply FinalA_tt_Var_omega in Hfx as Hfx'.
+
+  assert (Hf' : FinalA sigma (sigma v)).
+  { apply FinalA_tt_Var_omega; auto. }
+  apply (acceptingLoop'_intro (A:=A)) with (q2:=sigma x) (th2:=th2) (j:=j);
+  try assumption.
+  - apply sigma_fin_leq_EqnBRA.
+  exists ell.
+  apply models_fin_var; try assumption.
+  now apply Nat.lt_le_incl.
+  - apply Hcofix; try assumption.
+Qed.
+
+Lemma sigma_leq_accepting' :
+  forall v i theta,
+  (i, theta |= lfpF, var v) ->
+  accepting' (A:=A) (sigma v, theta, i).
+Proof.
+  intros v i theta H.
+  inversion H as [i1 j th1 th2 x v1 HF Hij Hm EQi1 EQth1 EQv1| | |];
+  clear th1 EQth1 i1 EQi1 v1 EQv1.
+  apply lfpF_is_sup with sigma v i j theta th2 x in HF;
+  destruct HF as [ell HF].
+  apply (accepting'_intro (A:=A) (sigma v) (sigma x) theta th2 i j);
+  try assumption.
+  - apply sigma_fin_leq_EqnBRA.
+  exists ell.
+  apply models_fin_var; auto.
+  now apply Nat.lt_le_incl.
+  - apply sigma_leq_acceptingLoop'; auto.
+  now apply Fpow_emp_x_tt_Var_omega in HF.
 Qed.
 
 End CorrectnessOfEqnBRA.

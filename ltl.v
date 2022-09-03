@@ -233,10 +233,22 @@ Fixpoint Fpow (sigma : eqn_sys) (i : nat) (u : Env) : Env :=
 Definition Fpow_emp sigma i := Fpow sigma i empty_env.
 
 Parameter lfpF : Env.
-Axiom lfpF_is_upperbound :
+Axiom lfpF_is_sup :
+  forall (sigma : eqn_sys) v i j theta theta' x,
+  lfpF v i j theta theta' x <->
+  exists ell,
+  Fpow_emp sigma ell v i j theta theta' x.
+
+Lemma lfpF_is_upperbound :
   forall (sigma : eqn_sys) ell v i j theta theta' x,
   Fpow_emp sigma ell v i j theta theta' x ->
   lfpF v i j theta theta' x.
+Proof.
+  intros sigma ell v i j theta theta' x H.
+  rewrite lfpF_is_sup.
+  exists ell.
+  apply H.
+Qed.
 
 (* The meaning of Vtt *)
 Axiom sigma_Vtt : forall sigma : eqn_sys,
