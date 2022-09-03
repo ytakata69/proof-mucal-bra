@@ -143,23 +143,16 @@ Proof.
   remember (q, theta', j) as c2 eqn: EQc2.
   generalize dependent theta;
   generalize dependent i.
-  generalize dependent theta';
-  generalize dependent j;
-  generalize dependent q.
   induction H as [c1 | c1 c3 c2 Hmov Hstar IH];
-  intros q j theta' EQc2 i theta EQc1.
+  intros i theta EQc1.
   - (* When c1 = c2 *)
   split;
   rewrite EQc2 in EQc1;
   now inversion EQc1.
   - (* When move c1 c3 and moveStar c3 c2 *)
-  rewrite EQc2 in Hstar;
   rewrite EQc2 in IH;
-  clear c2 EQc2.
-  rewrite EQc1 in Hmov;
-  clear c1 EQc1.
-  specialize (IH q j theta' (refl_equal (q, theta', j))).
-
+  specialize (IH (refl_equal (q, theta', j))).
+  rewrite EQc1 in Hmov; clear c1 EQc1.
   destruct c3 as [[q3 th3] i3].
   inversion Hmov
     as [phi R i1 q1 q2 th Ht Hm [EQq1 EQth EQi1] [EQq2 EQth3 EQi3]
@@ -167,22 +160,12 @@ Proof.
   clear i1 EQi1 q1 EQq1 q2 EQq2;
   inversion Ht as [EQtt EQphi EQR EQq3| | |];
   clear EQtt.
-  rewrite <- EQR in EQth3;
-  clear Ht R EQR.
+  rewrite <- EQR in EQth3; clear Ht R EQR.
   rewrite updateR_nil in EQth3.
   rewrite <- EQth3 in IH;
-  rewrite <- EQth3 in Hstar;
-  rewrite <- EQth3 in Hmov;
-  clear th3 EQth3.
   rewrite <- EQq3 in IH;
-  rewrite <- EQq3 in Hstar;
-  rewrite <- EQq3 in Hmov;
-  clear q3 EQq3.
-  rewrite <- EQi3 in IH;
-  rewrite <- EQi3 in Hstar;
-  rewrite <- EQi3 in Hmov;
-  clear i3 EQi3.
-  specialize (IH (S i) theta (refl_equal (φ [tt], theta, S i))).
+  rewrite <- EQi3 in IH.
+  specialize (IH (S i) theta (refl_equal (φ [tt], theta, S i)));
   assumption.
 Qed.
 
@@ -203,20 +186,20 @@ Proof.
   intros i j q1 q2 th1 th2 Hm.
   remember (q1, th1, i) as c1 eqn: EQc1.
   remember (q2, th2, j) as c2 eqn: EQc2.
-  generalize dependent th2.
-  generalize dependent q2.
-  generalize dependent th1.
-  generalize dependent q1.
+  generalize dependent th1;
+  generalize dependent q1;
   generalize dependent i.
   induction Hm as [| c1 c3 c2 Hmov Hstar IH];
-  intros i q1 th1 EQc1 q2 th2 EQc2.
+  intros i q1 th1 EQc1.
   - rewrite EQc2 in EQc1.
   inversion EQc1; auto.
-  - destruct c3 as [[q3 th3] i3].
+  - rewrite EQc2 in IH;
+  specialize (IH (refl_equal (q2, th2, j))).
+  destruct c3 as [[q3 th3] i3].
   apply le_trans with i3.
   + rewrite EQc1 in Hmov.
   now apply move_must_go_forward with q1 q3 th1 th3.
-  + apply IH with q3 th3 q2 th2; auto.
+  + apply IH with q3 th3; auto.
 Qed.
 
 Lemma state_is_sigma_v :
@@ -412,12 +395,9 @@ Proof.
   remember (sigma x, theta', j) as c2 eqn: EQc2.
   generalize dependent theta;
   generalize dependent i;
-  generalize dependent v;
-  generalize dependent theta';
-  generalize dependent j;
-  generalize dependent x.
+  generalize dependent v.
   induction H as [c1 | c1 c3 c2 Hmov Hstar IH];
-  intros x Hf j theta' EQc2 v i Hij theta EQc1.
+  intros v i Hij theta EQc1.
 
   - (* When c1 = c2 *)
   rewrite EQc2 in EQc1; clear EQc2.
@@ -440,10 +420,10 @@ Proof.
   right; auto.
 
   - (* When move c1 c3 /\ moveStar c3 c2 *)
+  rewrite EQc2 in IH;
+  specialize (IH (refl_equal (sigma x, theta', j))).
   rewrite EQc1 in Hmov; clear c1 EQc1.
-  rewrite EQc2 in Hstar;
-  rewrite EQc2 in IH; clear c2 EQc2.
-  specialize (IH x Hf j theta' (refl_equal (sigma x, theta', j))).
+  rewrite EQc2 in Hstar; clear c2 EQc2.
 
   destruct c3 as [[q3 th3] i3].
   assert (Hn := Hnormal v).
@@ -461,27 +441,16 @@ Proof.
   rewrite <- EQq3 in Ht;
   rewrite <- EQq3 in IH;
   clear q3 EQq3;
-  apply moveStar_must_go_forward in Hstar as Hi3j.
-  * (* When q1 = var v1 .\/ var v2 and q2 = sigma v1 *)
-  specialize (IH v1 i3 Hi3j th3
-    (refl_equal (sigma v1, th3, i3))).
-  destruct IH as [ell IH].
-  exists (S ell).
-  apply models_fin_var; auto.
+  apply moveStar_must_go_forward in Hstar as Hi3j;
+  [ specialize (IH v1 i3 Hi3j th3 (refl_equal (sigma v1, th3, i3)))
+  | specialize (IH v2 i3 Hi3j th3 (refl_equal (sigma v2, th3, i3)))];
+  destruct IH as [ell IH];
+  exists (S ell);
+  apply models_fin_var; auto;
   unfold Fpow;
   unfold F;
   left;
-  rewrite <- EQsv.
-  apply models_fin_OR; auto.
-  * (* When q1 = var v1 .\/ var v2 and q2 = sigma v2 *)
-  specialize (IH v2 i3 Hi3j th3 (refl_equal (sigma v2, th3, i3))).
-  destruct IH as [ell IH].
-  exists (S ell).
-  apply models_fin_var; auto.
-  unfold Fpow;
-  unfold F;
-  left;
-  rewrite <- EQsv.
+  rewrite <- EQsv;
   apply models_fin_OR; auto.
 
   + (* When sigma v = ↓ R ,X var v1 ../\ phi *)
