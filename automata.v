@@ -602,4 +602,29 @@ Proof.
   - now apply FinalA_tt_Var_omega.
 Qed.
 
+Lemma accepting_leq_sigma :
+  forall v i theta,
+  accepting (A:=A) (sigma v, theta, i) ->
+  (i, theta |= lfpF, var v).
+Proof.
+  intros v i theta H.
+  inversion H
+  as [q1 q2 th1 th2 i1 j Hij Hstar Ha [EQq1 EQth1 EQi1]];
+  clear q1 EQq1 th1 EQth1 i1 EQi1.
+  apply state_is_sigma_v in Hstar as Hsx.
+  destruct Hsx as [x Hsx].
+  rewrite Hsx in Ha;
+  rewrite Hsx in Hstar;
+  clear q2 Hsx.
+  apply acceptingLoop_leq_sigma in Ha as Ha'.
+  apply models_var with j th2 x; try assumption.
+  apply EqnBRA_leq_sigma_fin in Hstar.
+  - destruct Hstar as [ell Hstar].
+  apply lfpF_is_upperbound with ell.
+  inversion Hstar;
+  assumption.
+  - apply FinalA_tt_Var_omega.
+  now inversion Ha.
+Qed.
+
 End CorrectnessOfEqnBRA.
