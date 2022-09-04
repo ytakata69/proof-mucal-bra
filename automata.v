@@ -4,6 +4,8 @@
  *)
 
 Require Import ltl.
+Require Import Sets.Ensembles.
+Require Import Sets.Finite_sets.
 
 (* The set of actions with epsilon *)
 Inductive SigmaE :=
@@ -94,6 +96,40 @@ Inductive accepting' {A : automaton} : config A -> Prop :=
     moveStar (q1, th1, i) (q2, th2, j) ->
     acceptingLoop' (q2, th2, j) ->
     accepting' (q1, th1, i).
+
+Section AcceptingLoop.
+
+Inductive acceptingLoop'_state {A : automaton} : config A -> Ensemble (states A) -> Prop :=
+| acceptingLoop'_same_state : forall visited q theta i,
+    acceptingLoop        (q, theta, i) ->
+    acceptingLoop'_state (q, theta, i) visited
+| acceptingLoop'_diff_state : forall visited q1 q2 th1 th2 i j,
+    ~ In (states A) visited q1 ->
+    finals A q1 -> finals A q2 ->
+    i < j ->
+    moveStar (q1, th1, i) (q2, th2, j) ->
+    acceptingLoop'_state (q2, th2, j) (Add (states A) visited q1) ->
+    acceptingLoop'_state (q1, th1, i) visited
+  .
+
+Variable A : automaton.
+
+Hypothesis states_is_finite :
+  forall s : Ensemble (states A),
+  Finite (states A) s.
+
+Lemma acceptingLoop'_state_acceptingLoop :
+  forall used q th i,
+  acceptingLoop'_state (q, th, i) used ->
+  acceptingLoop (A:=A) (q, th, i).
+Proof.
+  intros used q th i H.
+  inversion H; auto.
+  apply acceptingLoop_intro with th2 j; auto.
+  destruct (states_is_finite visited).
+Abort.
+
+End AcceptingLoop.
 
 (* Conversion from Eqn into BRA *)
 
