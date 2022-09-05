@@ -439,11 +439,11 @@
 <a id="global_A"></a><h2>A </h2>
 <a href="automata.html#accepting">accepting</a> [inductive, in <a href="automata.html">automata</a>]<br/>
 <a href="automata.html#acceptingLoop">acceptingLoop</a> [inductive, in <a href="automata.html">automata</a>]<br/>
-<a href="automata.html#acceptingLoop_implies_sigma">acceptingLoop_implies_sigma</a> [lemma, in <a href="automata.html">automata</a>]<br/>
+<a href="automata.html#acceptingLoop_implies_models">acceptingLoop_implies_models</a> [lemma, in <a href="automata.html">automata</a>]<br/>
 <a href="automata.html#acceptingLoop_intro">acceptingLoop_intro</a> [constructor, in <a href="automata.html">automata</a>]<br/>
 <a href="automata.html#acceptingLoop'">acceptingLoop'</a> [inductive, in <a href="automata.html">automata</a>]<br/>
 <a href="automata.html#acceptingLoop'_intro">acceptingLoop'_intro</a> [constructor, in <a href="automata.html">automata</a>]<br/>
-<a href="automata.html#accepting_implies_sigma">accepting_implies_sigma</a> [lemma, in <a href="automata.html">automata</a>]<br/>
+<a href="automata.html#accepting_implies_models">accepting_implies_models</a> [lemma, in <a href="automata.html">automata</a>]<br/>
 <a href="automata.html#accepting_intro">accepting_intro</a> [constructor, in <a href="automata.html">automata</a>]<br/>
 <a href="automata.html#accepting'">accepting'</a> [inductive, in <a href="automata.html">automata</a>]<br/>
 <a href="automata.html#accepting'_intro">accepting'_intro</a> [constructor, in <a href="automata.html">automata</a>]<br/>
@@ -610,8 +610,10 @@
 <a href="ltl.html#models_pos">models_pos</a> [constructor, in <a href="ltl.html">ltl</a>]<br/>
 <a href="ltl.html#models_phi">models_phi</a> [inductive, in <a href="ltl.html">ltl</a>]<br/>
 <a href="ltl.html#models_atom">models_atom</a> [definition, in <a href="ltl.html">ltl</a>]<br/>
+<a href="automata.html#models_implies_accepting'">models_implies_accepting'</a> [lemma, in <a href="automata.html">automata</a>]<br/>
+<a href="automata.html#models_implies_acceptingLoop'">models_implies_acceptingLoop'</a> [lemma, in <a href="automata.html">automata</a>]<br/>
 <a href="automata.html#models_fin_ell_implies_moveStar">models_fin_ell_implies_moveStar</a> [lemma, in <a href="automata.html">automata</a>]<br/>
-<a href="automata.html#models_fin_eq_moveStar">models_fin_eq_moveStar</a> [lemma, in <a href="automata.html">automata</a>]<br/>
+<a href="automata.html#models_fin_iff_moveStar">models_fin_iff_moveStar</a> [lemma, in <a href="automata.html">automata</a>]<br/>
 <a href="automata.html#models_fin_implies_moveStar">models_fin_implies_moveStar</a> [lemma, in <a href="automata.html">automata</a>]<br/>
 <a href="automata.html#move">move</a> [inductive, in <a href="automata.html">automata</a>]<br/>
 <a href="automata.html#moveStar">moveStar</a> [inductive, in <a href="automata.html">automata</a>]<br/>
@@ -693,8 +695,6 @@
 <a href="automata.html#SigmaE">SigmaE</a> [inductive, in <a href="automata.html">automata</a>]<br/>
 <a href="ltl.html#sigma_injective_on_Var_omega">sigma_injective_on_Var_omega</a> [axiom, in <a href="ltl.html">ltl</a>]<br/>
 <a href="ltl.html#sigma_Vtt">sigma_Vtt</a> [axiom, in <a href="ltl.html">ltl</a>]<br/>
-<a href="automata.html#sigma_implies_accepting'">sigma_implies_accepting'</a> [lemma, in <a href="automata.html">automata</a>]<br/>
-<a href="automata.html#sigma_implies_acceptingLoop'">sigma_implies_acceptingLoop'</a> [lemma, in <a href="automata.html">automata</a>]<br/>
 <a href="ltl.html#sigma:103">sigma:103</a> [binder, in <a href="ltl.html">ltl</a>]<br/>
 <a href="ltl.html#sigma:111">sigma:111</a> [binder, in <a href="ltl.html">ltl</a>]<br/>
 <a href="ltl.html#sigma:116">sigma:116</a> [binder, in <a href="ltl.html">ltl</a>]<br/>
@@ -1245,16 +1245,18 @@
 <br/><br/><hr/>
 <h1>Lemma Index</h1>
 <a id="lemma_A"></a><h2>A </h2>
-<a href="automata.html#acceptingLoop_implies_sigma">acceptingLoop_implies_sigma</a> [in <a href="automata.html">automata</a>]<br/>
-<a href="automata.html#accepting_implies_sigma">accepting_implies_sigma</a> [in <a href="automata.html">automata</a>]<br/>
+<a href="automata.html#acceptingLoop_implies_models">acceptingLoop_implies_models</a> [in <a href="automata.html">automata</a>]<br/>
+<a href="automata.html#accepting_implies_models">accepting_implies_models</a> [in <a href="automata.html">automata</a>]<br/>
 <br/><br/><a id="lemma_F"></a><h2>F </h2>
 <a href="automata.html#FinalA_tt_Var_omega">FinalA_tt_Var_omega</a> [in <a href="automata.html">automata</a>]<br/>
 <a href="automata.html#Fpow_emp_implies_x_tt_Var_omega">Fpow_emp_implies_x_tt_Var_omega</a> [in <a href="automata.html">automata</a>]<br/>
 <br/><br/><a id="lemma_L"></a><h2>L </h2>
 <a href="ltl.html#lfpF_is_upperbound">lfpF_is_upperbound</a> [in <a href="ltl.html">ltl</a>]<br/>
 <br/><br/><a id="lemma_M"></a><h2>M </h2>
+<a href="automata.html#models_implies_accepting'">models_implies_accepting'</a> [in <a href="automata.html">automata</a>]<br/>
+<a href="automata.html#models_implies_acceptingLoop'">models_implies_acceptingLoop'</a> [in <a href="automata.html">automata</a>]<br/>
 <a href="automata.html#models_fin_ell_implies_moveStar">models_fin_ell_implies_moveStar</a> [in <a href="automata.html">automata</a>]<br/>
-<a href="automata.html#models_fin_eq_moveStar">models_fin_eq_moveStar</a> [in <a href="automata.html">automata</a>]<br/>
+<a href="automata.html#models_fin_iff_moveStar">models_fin_iff_moveStar</a> [in <a href="automata.html">automata</a>]<br/>
 <a href="automata.html#models_fin_implies_moveStar">models_fin_implies_moveStar</a> [in <a href="automata.html">automata</a>]<br/>
 <a href="automata.html#moveStar_implies_models_fin">moveStar_implies_models_fin</a> [in <a href="automata.html">automata</a>]<br/>
 <a href="automata.html#moveStar_must_go_forward">moveStar_must_go_forward</a> [in <a href="automata.html">automata</a>]<br/>
@@ -1265,8 +1267,6 @@
 <a href="ltl.html#phi_eq_xtt_phi">phi_eq_xtt_phi</a> [in <a href="ltl.html">ltl</a>]<br/>
 <a href="ltl.html#psi_eq_psi_or_ff">psi_eq_psi_or_ff</a> [in <a href="ltl.html">ltl</a>]<br/>
 <br/><br/><a id="lemma_S"></a><h2>S </h2>
-<a href="automata.html#sigma_implies_accepting'">sigma_implies_accepting'</a> [in <a href="automata.html">automata</a>]<br/>
-<a href="automata.html#sigma_implies_acceptingLoop'">sigma_implies_acceptingLoop'</a> [in <a href="automata.html">automata</a>]<br/>
 <a href="automata.html#state_is_sigma_v">state_is_sigma_v</a> [in <a href="automata.html">automata</a>]<br/>
 <br/><br/><a id="lemma_T"></a><h2>T </h2>
 <a href="automata.html#tt_loop_keeps_registers">tt_loop_keeps_registers</a> [in <a href="automata.html">automata</a>]<br/>
