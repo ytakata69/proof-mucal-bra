@@ -127,7 +127,7 @@ Definition EqnBRA (sigma : eqn_sys) :=
 Section CorrectnessOfEqnBRA.
 
 Variable sigma : eqn_sys.
-Local Definition A := EqnBRA sigma.
+Let A := EqnBRA sigma.
 
 (* Auxiliaries *)
 
