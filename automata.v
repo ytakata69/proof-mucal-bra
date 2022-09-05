@@ -557,7 +557,7 @@ Proof.
   now apply models_fin_TT.
 Qed.
 
-Theorem models_fin_eq_moveStar :
+Theorem models_fin_iff_moveStar :
   forall x v i j theta theta',
   (exists ell : nat,
     (i, theta; j, theta', x |= Fpow_emp sigma ell, var v)) <->
@@ -592,7 +592,7 @@ Qed.
 
 (* ------------------------------ *)
 
-Lemma acceptingLoop_implies_sigma :
+Lemma acceptingLoop_implies_models :
   forall v i theta,
   acceptingLoop (A:=A) (sigma v, theta, i) ->
   (i, theta |= lfpF, var v).
@@ -609,7 +609,7 @@ Proof.
   - now apply FinalA_tt_Var_omega.
 Qed.
 
-Theorem accepting_implies_sigma :
+Theorem accepting_implies_models :
   forall v i theta,
   accepting (A:=A) (sigma v, theta, i) ->
   (i, theta |= lfpF, var v).
@@ -623,7 +623,7 @@ Proof.
   rewrite Hsx in Ha;
   rewrite Hsx in Hstar;
   clear q2 Hsx.
-  apply acceptingLoop_implies_sigma in Ha as Ha'.
+  apply acceptingLoop_implies_models in Ha as Ha'.
   apply models_var with j th2 x; try assumption.
   apply moveStar_implies_models_fin in Hstar.
   - destruct Hstar as [ell Hstar].
@@ -634,7 +634,7 @@ Proof.
   now inversion Ha.
 Qed.
 
-Lemma sigma_implies_acceptingLoop' :
+Lemma models_implies_acceptingLoop' :
   forall v i theta,
   (i, theta |= lfpF, var v) ->
   (v = Vtt \/ Var_omega v = true) ->
@@ -660,7 +660,7 @@ Proof.
   - apply Hcofix; try assumption.
 Qed.
 
-Theorem sigma_implies_accepting' :
+Theorem models_implies_accepting' :
   forall v i theta,
   (i, theta |= lfpF, var v) ->
   accepting' (A:=A) (sigma v, theta, i).
@@ -676,7 +676,7 @@ Proof.
   exists ell.
   apply models_fin_var; auto.
   now apply Nat.lt_le_incl.
-  - apply sigma_implies_acceptingLoop'; auto.
+  - apply models_implies_acceptingLoop'; auto.
   now apply Fpow_emp_implies_x_tt_Var_omega in HF.
 Qed.
 
