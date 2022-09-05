@@ -129,6 +129,8 @@ Section CorrectnessOfEqnBRA.
 Variable sigma : eqn_sys.
 Local Definition A := EqnBRA sigma.
 
+(* Auxiliaries *)
+
 Lemma tt_loop_exists :
   forall theta i j,
   i <= j ->
@@ -285,7 +287,7 @@ Qed.
 Hypothesis Hnormal :
   forall v : Var, isNormal (sigma v).
 
-Lemma Fpow_emp_x_tt_Var_omega :
+Lemma Fpow_emp_implies_x_tt_Var_omega :
   forall ell x v i j theta theta',
   Fpow_emp sigma ell v i j theta theta' x ->
   x = Vtt \/ Var_omega x = true.
@@ -328,11 +330,11 @@ Lemma x_is_either_tt_or_Var_omega :
   x = Vtt \/ Var_omega x = true.
 Proof.
   intros x v i j theta theta' [ell H].
-  apply Fpow_emp_x_tt_Var_omega with ell v i j theta theta'.
+  apply Fpow_emp_implies_x_tt_Var_omega with ell v i j theta theta'.
   now inversion H.
 Qed.
 
-Lemma sigma_fin_leq_EqnBRA :
+Lemma models_fin_implies_moveStar :
   forall x v i j theta theta',
   (exists ell : nat,
     (i, theta; j, theta', x |= Fpow_emp sigma ell, var v)) ->
@@ -392,7 +394,7 @@ Proof.
   apply moveStar_refl.
 Qed.
 
-Lemma EqnBRA_leq_sigma_fin :
+Lemma moveStar_implies_models_fin :
   forall x v i j theta theta',
   moveStar (A:=A) (sigma v, theta, i) (sigma x, theta', j) ->
   (x = Vtt \/ Var_omega x = true) ->
@@ -555,7 +557,7 @@ Proof.
   now apply models_fin_TT.
 Qed.
 
-Theorem sigma_fin_eq_EqnBRA :
+Theorem models_fin_eq_moveStar :
   forall x v i j theta theta',
   (exists ell : nat,
     (i, theta; j, theta', x |= Fpow_emp sigma ell, var v)) <->
@@ -565,15 +567,15 @@ Proof.
   intros x v i j theta theta'.
   split; intro H.
   - split.
-  + now apply sigma_fin_leq_EqnBRA.
+  + now apply models_fin_implies_moveStar.
   + apply FinalA_tt_Var_omega.
   now apply x_is_either_tt_or_Var_omega with v i j theta theta'.
   - destruct H as [H1 H2].
   apply FinalA_tt_Var_omega in H2.
-  now apply EqnBRA_leq_sigma_fin.
+  now apply moveStar_implies_models_fin.
 Qed.
 
-Lemma sigma_fin_ell_leq_EqnBRA :
+Lemma models_fin_ell_implies_moveStar :
   forall ell x v i j theta theta',
   (i, theta; j, theta', x |= Fpow_emp sigma ell, var v) ->
   moveStar (A:=A) (sigma v, theta, i) (sigma x, theta', j) /\
@@ -581,7 +583,7 @@ Lemma sigma_fin_ell_leq_EqnBRA :
 Proof.
   intros ell x v i j theta theta' H.
   split.
-  + apply sigma_fin_leq_EqnBRA;
+  + apply models_fin_implies_moveStar;
   now exists ell.
   + apply FinalA_tt_Var_omega.
   apply x_is_either_tt_or_Var_omega with v i j theta theta';
@@ -590,7 +592,7 @@ Qed.
 
 (* ------------------------------ *)
 
-Lemma acceptingLoop_leq_sigma :
+Lemma acceptingLoop_implies_sigma :
   forall v i theta,
   acceptingLoop (A:=A) (sigma v, theta, i) ->
   (i, theta |= lfpF, var v).
@@ -598,7 +600,7 @@ Proof.
   cofix Hcofix.
   intros v i theta H.
   inversion H as [q th1 th2 i1 j Hf Hij Hstar Ha [EQqc1 EQth1 EQi1]].
-  apply EqnBRA_leq_sigma_fin in Hstar as Hm1.
+  apply moveStar_implies_models_fin in Hstar as Hm1.
   - destruct Hm1 as [ell Hm1].
   inversion_clear Hm1 as [i2 j1 th3 th4 x v1 Hij' HF | | | |].
   apply models_var with j th2 v; try assumption.
@@ -607,7 +609,7 @@ Proof.
   - now apply FinalA_tt_Var_omega.
 Qed.
 
-Lemma accepting_leq_sigma :
+Theorem accepting_implies_sigma :
   forall v i theta,
   accepting (A:=A) (sigma v, theta, i) ->
   (i, theta |= lfpF, var v).
@@ -621,9 +623,9 @@ Proof.
   rewrite Hsx in Ha;
   rewrite Hsx in Hstar;
   clear q2 Hsx.
-  apply acceptingLoop_leq_sigma in Ha as Ha'.
+  apply acceptingLoop_implies_sigma in Ha as Ha'.
   apply models_var with j th2 x; try assumption.
-  apply EqnBRA_leq_sigma_fin in Hstar.
+  apply moveStar_implies_models_fin in Hstar.
   - destruct Hstar as [ell Hstar].
   apply lfpF_is_upperbound with sigma ell.
   inversion Hstar;
@@ -632,7 +634,7 @@ Proof.
   now inversion Ha.
 Qed.
 
-Lemma sigma_leq_acceptingLoop' :
+Lemma sigma_implies_acceptingLoop' :
   forall v i theta,
   (i, theta |= lfpF, var v) ->
   (v = Vtt \/ Var_omega v = true) ->
@@ -644,21 +646,21 @@ Proof.
   clear i1 EQi1 th1 EQth1 v1 EQv1.
   apply lfpF_is_sup with sigma v i j theta th2 x in HF;
   destruct HF as [ell HF].
-  apply Fpow_emp_x_tt_Var_omega in HF as Hfx;
+  apply Fpow_emp_implies_x_tt_Var_omega in HF as Hfx;
   apply FinalA_tt_Var_omega in Hfx as Hfx'.
 
   assert (Hf' : FinalA sigma (sigma v)).
   { apply FinalA_tt_Var_omega; auto. }
   apply (acceptingLoop'_intro (A:=A)) with (q2:=sigma x) (th2:=th2) (j:=j);
   try assumption.
-  - apply sigma_fin_leq_EqnBRA.
+  - apply models_fin_implies_moveStar.
   exists ell.
   apply models_fin_var; try assumption.
   now apply Nat.lt_le_incl.
   - apply Hcofix; try assumption.
 Qed.
 
-Lemma sigma_leq_accepting' :
+Theorem sigma_implies_accepting' :
   forall v i theta,
   (i, theta |= lfpF, var v) ->
   accepting' (A:=A) (sigma v, theta, i).
@@ -670,12 +672,12 @@ Proof.
   destruct HF as [ell HF].
   apply (accepting'_intro (A:=A) (sigma v) (sigma x) theta th2 i j);
   try assumption.
-  - apply sigma_fin_leq_EqnBRA.
+  - apply models_fin_implies_moveStar.
   exists ell.
   apply models_fin_var; auto.
   now apply Nat.lt_le_incl.
-  - apply sigma_leq_acceptingLoop'; auto.
-  now apply Fpow_emp_x_tt_Var_omega in HF.
+  - apply sigma_implies_acceptingLoop'; auto.
+  now apply Fpow_emp_implies_x_tt_Var_omega in HF.
 Qed.
 
 End CorrectnessOfEqnBRA.
