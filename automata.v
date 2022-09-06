@@ -335,14 +335,12 @@ Proof.
 Qed.
 
 Lemma models_fin_implies_moveStar :
+  forall ell,
   forall x v i j theta theta',
-  (exists ell : nat,
-    (i, theta; j, theta', x |= Fpow_emp sigma ell, var v)) ->
-  moveStar (A:=A) (sigma v, theta, i) (sigma x, theta', j).
+    (i, theta; j, theta', x |= Fpow_emp sigma ell, var v) ->
+    moveStar (A:=A) (sigma v, theta, i) (sigma x, theta', j).
 Proof.
-  intros x v i j theta theta';
-  intros [ell H];
-  revert x v i j theta theta' H.
+  intro ell.
   induction ell as [| n IHn].
   - (* When ell = 0 *)
   unfold Fpow_emp.
@@ -559,35 +557,33 @@ Qed.
 
 Theorem models_fin_iff_moveStar :
   forall x v i j theta theta',
-  (exists ell : nat,
-    (i, theta; j, theta', x |= Fpow_emp sigma ell, var v)) <->
+  (i, theta; j, theta', x |= lfpF sigma, var v) <->
   moveStar (A:=A) (sigma v, theta, i) (sigma x, theta', j) /\
   FinalA sigma (sigma x).
 Proof.
   intros x v i j theta theta'.
   split; intro H.
-  - split.
-  + now apply models_fin_implies_moveStar.
-  + apply FinalA_tt_Var_omega.
-  now apply x_is_either_tt_or_Var_omega with v i j theta theta'.
-  - destruct H as [H1 H2].
-  apply FinalA_tt_Var_omega in H2.
-  now apply moveStar_implies_models_fin.
-Qed.
-
-Lemma models_fin_ell_implies_moveStar :
-  forall ell x v i j theta theta',
-  (i, theta; j, theta', x |= Fpow_emp sigma ell, var v) ->
-  moveStar (A:=A) (sigma v, theta, i) (sigma x, theta', j) /\
-  FinalA sigma (sigma x).
-Proof.
-  intros ell x v i j theta theta' H.
+  - (* -> *)
+  inversion_clear H as [i1 j1 t1 t2 x1 v1 Hij Hlfp| | | |];
+  apply lfpF_is_sup_Fpow in Hlfp;
+  destruct Hlfp as [ell HF].
   split.
-  + apply models_fin_implies_moveStar;
-  now exists ell.
+  + apply models_fin_implies_moveStar with ell.
+  now apply models_fin_var.
   + apply FinalA_tt_Var_omega.
-  apply x_is_either_tt_or_Var_omega with v i j theta theta';
-  now exists ell.
+  apply x_is_either_tt_or_Var_omega with v i j theta theta'.
+  exists ell.
+  now apply models_fin_var.
+  - (* <- *)
+  destruct H as [Hm Hf].
+  apply FinalA_tt_Var_omega in Hf.
+  apply models_fin_var.
+  + now apply moveStar_must_go_forward in Hm.
+  + apply lfpF_is_sup_Fpow.
+  apply moveStar_implies_models_fin in Hm; auto.
+  destruct Hm as [ell Hm].
+  exists ell.
+  now inversion Hm.
 Qed.
 
 (* ------------------------------ *)
@@ -604,7 +600,7 @@ Proof.
   - destruct Hm1 as [ell Hm1].
   inversion_clear Hm1 as [i2 j1 th3 th4 x v1 Hij' HF | | | |].
   apply models_var with j th2 v; try assumption.
-  + now apply lfpF_is_upperbound with ell.
+  + now apply lfpF_is_upperbound_Fpow with ell.
   + now apply Hcofix.
   - now apply FinalA_tt_Var_omega.
 Qed.
@@ -627,7 +623,7 @@ Proof.
   apply models_var with j th2 x; try assumption.
   apply moveStar_implies_models_fin in Hstar.
   - destruct Hstar as [ell Hstar].
-  apply lfpF_is_upperbound with ell.
+  apply lfpF_is_upperbound_Fpow with ell.
   inversion Hstar;
   assumption.
   - apply FinalA_tt_Var_omega.
@@ -644,7 +640,7 @@ Proof.
   intros v i theta H Hf.
   inversion H as [i1 j th1 th2 x v1 HF Hij Hchain EQi1 EQth1 EQv1 | | |];
   clear i1 EQi1 th1 EQth1 v1 EQv1.
-  apply lfpF_is_sup with sigma v i j theta th2 x in HF;
+  apply lfpF_is_sup_Fpow with sigma v i j theta th2 x in HF;
   destruct HF as [ell HF].
   apply Fpow_emp_implies_x_tt_Var_omega in HF as Hfx;
   apply FinalA_tt_Var_omega in Hfx as Hfx'.
@@ -653,8 +649,7 @@ Proof.
   { apply FinalA_tt_Var_omega; auto. }
   apply (acceptingLoop'_intro (A:=A)) with (q2:=sigma x) (th2:=th2) (j:=j);
   try assumption.
-  - apply models_fin_implies_moveStar.
-  exists ell.
+  - apply models_fin_implies_moveStar with ell.
   apply models_fin_var; try assumption.
   now apply Nat.lt_le_incl.
   - apply Hcofix; try assumption.
@@ -668,12 +663,11 @@ Proof.
   intros v i theta H.
   inversion H as [i1 j th1 th2 x v1 HF Hij Hm EQi1 EQth1 EQv1| | |];
   clear th1 EQth1 i1 EQi1 v1 EQv1.
-  apply lfpF_is_sup with sigma v i j theta th2 x in HF;
+  apply lfpF_is_sup_Fpow with sigma v i j theta th2 x in HF;
   destruct HF as [ell HF].
   apply (accepting'_intro (A:=A) (sigma v) (sigma x) theta th2 i j);
   try assumption.
-  - apply models_fin_implies_moveStar.
-  exists ell.
+  - apply models_fin_implies_moveStar with ell.
   apply models_fin_var; auto.
   now apply Nat.lt_le_incl.
   - apply models_implies_acceptingLoop'; auto.

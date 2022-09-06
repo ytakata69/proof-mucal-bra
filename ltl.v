@@ -445,7 +445,7 @@ Inductive all_Fpow : Ensemble Env :=
 
 Definition lfpF : Env := env_union all_Fpow.
 
-Lemma lfpF_is_upperbound :
+Lemma lfpF_is_upperbound_Fpow :
   forall ell v i j theta theta' x,
   Fpow_emp sigma ell v i j theta theta' x ->
   lfpF v i j theta theta' x.
@@ -456,7 +456,7 @@ Proof.
   apply all_Fpow_intro.
 Qed.
 
-Theorem lfpF_is_sup :
+Theorem lfpF_is_sup_Fpow :
   forall v i j theta theta' x,
   lfpF v i j theta theta' x <->
   exists ell,
@@ -472,7 +472,7 @@ Proof.
   now rewrite EQu.
   - (* <- *)
   destruct H as [ell H].
-  now apply lfpF_is_upperbound with ell.
+  now apply lfpF_is_upperbound_Fpow with ell.
 Qed.
 
 End LeastFixedPoint.
