@@ -595,7 +595,7 @@ Qed.
 Lemma acceptingLoop_implies_models :
   forall v i theta,
   acceptingLoop (A:=A) (sigma v, theta, i) ->
-  (i, theta |= lfpF, var v).
+  (i, theta |= lfpF sigma, var v).
 Proof.
   cofix Hcofix.
   intros v i theta H.
@@ -604,7 +604,7 @@ Proof.
   - destruct Hm1 as [ell Hm1].
   inversion_clear Hm1 as [i2 j1 th3 th4 x v1 Hij' HF | | | |].
   apply models_var with j th2 v; try assumption.
-  + now apply lfpF_is_upperbound with sigma ell.
+  + now apply lfpF_is_upperbound with ell.
   + now apply Hcofix.
   - now apply FinalA_tt_Var_omega.
 Qed.
@@ -612,7 +612,7 @@ Qed.
 Theorem accepting_implies_models :
   forall v i theta,
   accepting (A:=A) (sigma v, theta, i) ->
-  (i, theta |= lfpF, var v).
+  (i, theta |= lfpF sigma, var v).
 Proof.
   intros v i theta H.
   inversion H
@@ -627,7 +627,7 @@ Proof.
   apply models_var with j th2 x; try assumption.
   apply moveStar_implies_models_fin in Hstar.
   - destruct Hstar as [ell Hstar].
-  apply lfpF_is_upperbound with sigma ell.
+  apply lfpF_is_upperbound with ell.
   inversion Hstar;
   assumption.
   - apply FinalA_tt_Var_omega.
@@ -636,7 +636,7 @@ Qed.
 
 Lemma models_implies_acceptingLoop' :
   forall v i theta,
-  (i, theta |= lfpF, var v) ->
+  (i, theta |= lfpF sigma, var v) ->
   (v = Vtt \/ Var_omega v = true) ->
   acceptingLoop' (A:=A) (sigma v, theta, i).
 Proof.
@@ -662,7 +662,7 @@ Qed.
 
 Theorem models_implies_accepting' :
   forall v i theta,
-  (i, theta |= lfpF, var v) ->
+  (i, theta |= lfpF sigma, var v) ->
   accepting' (A:=A) (sigma v, theta, i).
 Proof.
   intros v i theta H.

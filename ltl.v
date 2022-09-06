@@ -233,37 +233,6 @@ Fixpoint Fpow (sigma : eqn_sys) (i : nat) (u : Env) : Env :=
   end.
 Definition Fpow_emp sigma i := Fpow sigma i empty_env.
 
-Parameter lfpF : Env.
-Axiom lfpF_is_sup :
-  forall (sigma : eqn_sys) v i j theta theta' x,
-  lfpF v i j theta theta' x <->
-  exists ell,
-  Fpow_emp sigma ell v i j theta theta' x.
-
-Lemma lfpF_is_upperbound :
-  forall (sigma : eqn_sys) ell v i j theta theta' x,
-  Fpow_emp sigma ell v i j theta theta' x ->
-  lfpF v i j theta theta' x.
-Proof.
-  intros sigma ell v i j theta theta' x H.
-  rewrite lfpF_is_sup.
-  exists ell.
-  apply H.
-Qed.
-
-(* The meaning of Vtt *)
-Axiom sigma_Vtt : forall sigma : eqn_sys,
-  sigma Vtt = (φ [tt]).
-
-Axiom tt_Vtt_or_Var_omega :
-  forall (sigma : eqn_sys) (v : Var),
-  sigma v = (φ [tt]) ->
-  v = Vtt \/ Var_omega v = true.
-
-Axiom sigma_injective_on_Var_omega :
-  forall (sigma : eqn_sys) (v1 v2 : Var),
-  Var_omega v1 = true ->
-  sigma v1 = sigma v2 -> v1 = v2.
 
 (* Continuities *)
 
@@ -274,9 +243,10 @@ Definition env_leq (u1 u2 : Env) : Prop :=
   forall i j theta theta' x,
   u1 v i j theta theta' x -> u2 v i j theta theta' x.
 
-Inductive env_union (s : Ensemble Env) : Env :=
+Inductive env_union : Ensemble Env -> Env :=
   env_union_intro :
-    forall u, In Env s u ->
+    forall (s : Ensemble Env) u,
+      In Env s u ->
     forall v i j theta theta' x,
       u v i j theta theta' x ->
       env_union s v i j theta theta' x.
@@ -343,7 +313,7 @@ Proof.
   intros i j theta theta' x H.
   - (* When psi = var v *)
   inversion_clear H as [i1 j1 t1 t2 x1 v2 Hij Huni| | | |].
-  inversion_clear Huni as [u].
+  inversion_clear Huni as [s1 u].
   exists u.
   split; auto.
   apply models_fin_var; auto.
@@ -440,7 +410,7 @@ Proof.
   intros s Hnonemp.
   unfold env_leq.
   intros v i j theta theta' x H.
-  inversion_clear H as [u Hin v1 i1 j1 t1 t2 x1 Hu].
+  inversion_clear H as [s1 u Hin v1 i1 j1 t1 t2 x1 Hu].
   inversion Hin as [f s1 u1 Hin1 EQf EQs1 EQu1].
   rewrite <- EQu1 in Hu.
   unfold F;
@@ -464,6 +434,65 @@ Proof.
 Qed.
 
 End Continuities.
+
+Section LeastFixedPoint.
+
+Variable sigma : eqn_sys.
+
+Inductive all_Fpow : Ensemble Env :=
+  all_Fpow_intro :
+    forall ell : nat, In Env all_Fpow (Fpow_emp sigma ell).
+
+Definition lfpF : Env := env_union all_Fpow.
+
+Lemma lfpF_is_upperbound :
+  forall ell v i j theta theta' x,
+  Fpow_emp sigma ell v i j theta theta' x ->
+  lfpF v i j theta theta' x.
+Proof.
+  intros ell v i j theta theta' x H.
+  unfold lfpF.
+  apply env_union_intro with (Fpow_emp sigma ell); auto.
+  apply all_Fpow_intro.
+Qed.
+
+Theorem lfpF_is_sup :
+  forall v i j theta theta' x,
+  lfpF v i j theta theta' x <->
+  exists ell,
+  Fpow_emp sigma ell v i j theta theta' x.
+Proof.
+  intros v i j theta theta' x.
+  split; intro H.
+  - (* -> *)
+  unfold lfpF in H.
+  inversion_clear H as [s u Hin v1 i1 j1 t1 t2 x1 Hu].
+  inversion Hin as [ell EQu].
+  exists ell.
+  now rewrite EQu.
+  - (* <- *)
+  destruct H as [ell H].
+  now apply lfpF_is_upperbound with ell.
+Qed.
+
+End LeastFixedPoint.
+
+(* Syntactical assumptions *)
+
+(* The meaning of Vtt *)
+Axiom sigma_Vtt : forall sigma : eqn_sys,
+  sigma Vtt = (φ [tt]).
+
+Axiom tt_Vtt_or_Var_omega :
+  forall (sigma : eqn_sys) (v : Var),
+  sigma v = (φ [tt]) ->
+  v = Vtt \/ Var_omega v = true.
+
+Axiom sigma_injective_on_Var_omega :
+  forall (sigma : eqn_sys) (v1 v2 : Var),
+  Var_omega v1 = true ->
+  sigma v1 = sigma v2 -> v1 = v2.
+
 
 (* Normalized LTL formulas *)
 
