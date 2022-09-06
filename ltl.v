@@ -6,7 +6,8 @@
 Require Export Nat Arith.
 Require Export Lists.List.
 Require Export Lists.Streams.
- 
+Require Import Sets.Ensembles.
+
 (* data words *)
  
 Definition D := nat.
@@ -263,6 +264,206 @@ Axiom sigma_injective_on_Var_omega :
   forall (sigma : eqn_sys) (v1 v2 : Var),
   Var_omega v1 = true ->
   sigma v1 = sigma v2 -> v1 = v2.
+
+(* Continuities *)
+
+Section Continuities.
+
+Definition env_leq (u1 u2 : Env) : Prop :=
+  forall v : Var,
+  forall i j theta theta' x,
+  u1 v i j theta theta' x -> u2 v i j theta theta' x.
+
+Inductive env_union (s : Ensemble Env) : Env :=
+  env_union_intro :
+    forall u, In Env s u ->
+    forall v i j theta theta' x,
+      u v i j theta theta' x ->
+      env_union s v i j theta theta' x.
+
+Inductive Ens_map {A : Type} : (A -> A) -> Ensemble A -> Ensemble A :=
+  Ens_map_intro :
+    forall (f : A -> A) (s : Ensemble A) (u : A),
+    In A s u -> In A (Ens_map f s) (f u).
+
+Lemma env_leq_union :
+  forall (s : Ensemble Env) (u : Env),
+    In Env s u -> env_leq u (env_union s).
+Proof.
+  intros s u Hin.
+  unfold env_leq;
+  intros v i j theta theta' x Hu.
+  now apply env_union_intro with u.
+Qed.
+
+
+Lemma models_fin_is_monotonic :
+  forall (u1 u2 : Env),
+    env_leq u1 u2 ->
+  forall psi i j theta theta' x,
+    (i, theta; j, theta', x |= u1, psi) ->
+    (i, theta; j, theta', x |= u2, psi).
+Proof.
+  intros u1 u2 Hu1u2 psi.
+  induction psi
+  as [| psi1 IH1 psi2 IH2
+      | R psi IH phi
+      | phi ];
+  intros i j theta theta' x H.
+  - (* When psi = var v *)
+  inversion H;
+  apply models_fin_var; auto.
+  - (* When psi = l1 .\/ l2 *)
+  inversion_clear H as [|i1 j1 t1 t2 x1 p1 p2 Hij Hor| | |];
+  apply models_fin_OR; auto;
+  destruct Hor as [Hor | Hor];
+  [left | right];
+  [apply IH1 | apply IH2];
+  auto.
+  - (* When psi = ↓ R ,X psi ../\ phi *)
+  inversion H;
+  apply models_fin_STORE_X; auto.
+  - (* When psi = φ phi *)
+  inversion H.
+  + now apply models_fin_TT.
+  + now apply models_fin_PHI.
+Qed.
+
+Lemma models_fin_is_continuous_half :
+  forall (s : Ensemble Env),
+    (exists u, In Env s u) (* non-empty *) ->
+  forall psi i j theta theta' x,
+    (i, theta; j, theta', x |= env_union s, psi) ->
+  exists u, In Env s u /\
+    (i, theta; j, theta', x |= u, psi).
+Proof.
+  intros s Hnonemp psi.
+  induction psi
+  as [v | psi1 IH1 psi2 IH2 | R psi IH phi | phi];
+  intros i j theta theta' x H.
+  - (* When psi = var v *)
+  inversion_clear H as [i1 j1 t1 t2 x1 v2 Hij Huni| | | |].
+  inversion_clear Huni as [u].
+  exists u.
+  split; auto.
+  apply models_fin_var; auto.
+  - (* When psi = psi1 .\/ psi2 *)
+  inversion_clear H as [|i1 j1 t1 t2 x1 p1 p2 Hij Huni| | |].
+  destruct Huni as [Huni | Huni];
+  [apply IH1 in Huni | apply IH2 in Huni];
+  destruct Huni as [u [Hin Huni]];
+  exists u;
+  split; auto;
+  apply models_fin_OR; auto.
+  - (* When psi = ↓ R ,X psi ../\ phi *)
+  inversion_clear H as [| |i1 j1 t1 t2 x1 R1 p1 p2 Hij Hm Huni| |].
+  apply IH in Huni.
+  destruct Huni as [u [Hin Huni]].
+  exists u.
+  split; auto.
+  apply models_fin_STORE_X; auto.
+  - (* When psi = (φ phi) *)
+  destruct Hnonemp as [u Hin].
+  exists u;
+  split; auto.
+  inversion H as [| | | i1 j1 t1 Hij |].
+  + now apply models_fin_TT.
+  + now apply models_fin_PHI.
+Qed.
+
+Theorem models_fin_is_continuous :
+  forall (s : Ensemble Env),
+    (exists u, In Env s u) (* non-empty *) ->
+  forall psi i j theta theta' x,
+    (i, theta; j, theta', x |= env_union s, psi) <->
+    (exists u, In Env s u /\
+      (i, theta; j, theta', x |= u, psi)).
+Proof.
+  intros s Hnonemp psi i j theta theta' x.
+  split.
+  - (* -> *)
+  now apply models_fin_is_continuous_half.
+  - (* <- *)
+  intros [u [Hin Hm]].
+  apply models_fin_is_monotonic with u; auto.
+  now apply env_leq_union.
+Qed.
+
+
+Variable sigma : eqn_sys.
+
+Lemma F_is_monotonic :
+  forall (u1 u2 : Env),
+    env_leq u1 u2 ->
+    env_leq (F sigma u1) (F sigma u2).
+Proof.
+  intros u1 u2 Hu1u2.
+  unfold env_leq.
+  intros v i j theta theta' x.
+  unfold F.
+  intro H;
+  destruct H as [H | H].
+  - left;
+  now apply models_fin_is_monotonic with u1.
+  - now right.
+Qed.
+
+Lemma F_is_continuous_1st_half :
+  forall (s : Ensemble Env),
+    (exists u, In Env s u) (* non-empty *) ->
+    env_leq (F sigma (env_union s)) (env_union (Ens_map (F sigma) s)).
+Proof.
+  intros s Hnonemp.
+  unfold env_leq.
+  intros v i j theta theta' x H.
+  inversion H as [Hm | Hf].
+  - (* When (i,theta;j,theta',x |= sigma v) *)
+  apply models_fin_is_continuous in Hm; auto.
+  destruct Hm as [u [Hin Hm]].
+  apply env_union_intro with (F sigma u).
+  + now apply Ens_map_intro.
+  + unfold F;
+  now left.
+  - (* When Var_omega v = true *)
+  destruct Hnonemp as [u Hin].
+  apply env_union_intro with (F sigma u).
+  + now apply Ens_map_intro.
+  + unfold F;
+  now right.
+Qed.
+
+Lemma F_is_continuous_2nd_half :
+  forall (s : Ensemble Env),
+    (exists u, In Env s u) (* non-empty *) ->
+    env_leq (env_union (Ens_map (F sigma) s)) (F sigma (env_union s)).
+Proof.
+  intros s Hnonemp.
+  unfold env_leq.
+  intros v i j theta theta' x H.
+  inversion_clear H as [u Hin v1 i1 j1 t1 t2 x1 Hu].
+  inversion Hin as [f s1 u1 Hin1 EQf EQs1 EQu1].
+  rewrite <- EQu1 in Hu.
+  unfold F;
+  unfold F in Hu.
+  destruct Hu as [Hu | Hu]; [left | right]; auto.
+  apply models_fin_is_monotonic with u1;
+  auto.
+  now apply env_leq_union.
+Qed.
+
+Theorem F_is_continuous :
+  forall (s : Ensemble Env),
+    (exists u, In Env s u) (* non-empty *) ->
+    env_leq (F sigma (env_union s)) (env_union (Ens_map (F sigma) s)) /\
+    env_leq (env_union (Ens_map (F sigma) s)) (F sigma (env_union s)).
+Proof.
+  intros s Hnonemp.
+  split.
+  - now apply F_is_continuous_1st_half.
+  - now apply F_is_continuous_2nd_half.
+Qed.
+
+End Continuities.
 
 (* Normalized LTL formulas *)
 
