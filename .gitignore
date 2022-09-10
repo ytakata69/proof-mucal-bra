@@ -1,0 +1,7 @@
+*.vo
+*.vo[ks]
+*.glob
+*.aux
+
+*~
+*.bak
