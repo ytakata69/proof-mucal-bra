@@ -1,5 +1,5 @@
-targets = automata.vo
-srcs = ltl.v automata.v
+targets = bra_to_eqn.vo
+srcs = ltl.v automata.v bra_to_eqn.v
 docdir = ./docs
 vobjs = $(srcs:.v=.vo)
 
@@ -10,6 +10,7 @@ vobjs = $(srcs:.v=.vo)
 default: $(targets)
 all: $(targets)
 
+bra_to_eqn.vo: automata.vo
 automata.vo: ltl.vo
 
 doc: $(vobjs)
