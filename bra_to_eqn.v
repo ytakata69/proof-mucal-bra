@@ -6,6 +6,8 @@
 Require Import ltl.
 Require Import automata.
 
+Section Auxiliaries.
+
 Lemma Forall_In {T : Type} :
   forall (l : list T),
     Forall (fun x => In x l) l.
@@ -14,6 +16,17 @@ Proof.
   rewrite Forall_forall.
   intros x H; assumption.
 Qed.
+
+Lemma neg_exists_eq_forall :
+  forall (T : Type) (P : T -> Prop),
+  ~ (exists q : T, P q) <-> (forall q : T, ~ P q).
+Proof.
+  intros T P; split.
+  - intros H q pq; apply H; now exists q.
+  - intros H [q pq]; now apply (H q).
+Qed.
+
+End Auxiliaries.
 
 Section BRAToEqn.
 
@@ -168,9 +181,11 @@ Proof.
   now apply QDVar_neq_RVar in Hrqd.
 Qed.
 
+Section CorrectnessOfSigmaA.
+
 (*** AA is the automaton obtained from sigmaA ***)
 
-Definition AA := EqnBRA sigmaA.
+Let AA := EqnBRA sigmaA.
 
 (*** AA simulates A ***)
 
@@ -302,15 +317,6 @@ Qed.
 (*** A simulates AA ***)
 
 (* Decidability of equality *)
-
-Lemma neg_exists_eq_forall :
-  forall (T : Type) (P : T -> Prop),
-  ~ (exists q : T, P q) <-> (forall q : T, ~ P q).
-Proof.
-  intros T P; split.
-  - intros H q pq; apply H; now exists q.
-  - intros H [q pq]; now apply (H q).
-Qed.
 
 Lemma neg_exists_P_forall_neg_P_open :
   forall q' : states AA,
@@ -683,5 +689,7 @@ Proof.
   apply move_moveStar with (q1, th3, i3); auto.
   apply QVar_to_QVar_one_step; auto.
 Qed.
+
+End CorrectnessOfSigmaA.
 
 End BRAToEqn.
