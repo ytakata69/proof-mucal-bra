@@ -217,13 +217,13 @@ Notation "'(' i ',' theta ';' j ',' theta' ',' x '|=' u ',' psi ')'"
 
 Definition eqn_sys := Var -> ltl.  (* the type of equation systems *)
 
-Parameter Var_omega : Var -> bool.
+Parameter Var_omega : Var -> Prop.
 
 (* The transformation from Env to Env *)
 Definition F (sigma : eqn_sys) (u : Env) : Env :=
   fun (v : Var) (i j : nat) (theta theta' : Theta) (x : Var) =>
   (i, theta; j, theta', x |= u, sigma v)
-  \/ (Var_omega v = true /\ x = v /\ i = j /\ theta = theta').
+  \/ (Var_omega v /\ x = v /\ i = j /\ theta = theta').
 
 (* power of F *)
 Fixpoint Fpow (sigma : eqn_sys) (i : nat) (u : Env) : Env :=
@@ -394,7 +394,7 @@ Proof.
   + now apply Ens_map_intro.
   + unfold F;
   now left.
-  - (* When Var_omega v = true *)
+  - (* When Var_omega v *)
   destruct Hnonemp as [u Hin].
   apply env_union_intro with (F sigma u).
   + now apply Ens_map_intro.
@@ -486,11 +486,11 @@ Axiom sigma_Vtt : forall sigma : eqn_sys,
 Axiom tt_Vtt_or_Var_omega :
   forall (sigma : eqn_sys) (v : Var),
   sigma v = (φ [tt]) ->
-  v = Vtt \/ Var_omega v = true.
+  v = Vtt \/ Var_omega v.
 
 Axiom sigma_injective_on_Var_omega :
   forall (sigma : eqn_sys) (v1 v2 : Var),
-  Var_omega v1 = true ->
+  Var_omega v1 ->
   sigma v1 = sigma v2 -> v1 = v2.
 
 

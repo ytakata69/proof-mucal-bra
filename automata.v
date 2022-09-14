@@ -116,7 +116,7 @@ Inductive FinalA (sigma : eqn_sys)
   : ltl -> Prop :=
   | FinalA_TT  : FinalA sigma (φ [tt])
   | FinalA_Var_omega : forall v : Var,
-    Var_omega v = true -> FinalA sigma (sigma v)
+    Var_omega v -> FinalA sigma (sigma v)
   .
 
 Definition EqnBRA (sigma : eqn_sys) :=
@@ -263,8 +263,7 @@ Qed.
 
 Lemma FinalA_tt_Var_omega :
   forall x,
-  FinalA sigma (sigma x) <->
-  x = Vtt \/ Var_omega x = true.
+  FinalA sigma (sigma x) <-> x = Vtt \/ Var_omega x.
 Proof.
   intro x.
   split; intro H.
@@ -290,7 +289,7 @@ Hypothesis Hnormal :
 Lemma Fpow_emp_implies_x_tt_Var_omega :
   forall ell x v i j theta theta',
   Fpow_emp sigma ell v i j theta theta' x ->
-  x = Vtt \/ Var_omega x = true.
+  x = Vtt \/ Var_omega x.
 Proof.
   unfold Fpow_emp.
   intros ell x.
@@ -327,7 +326,7 @@ Lemma x_is_either_tt_or_Var_omega :
   forall x v i j theta theta',
   (exists ell : nat,
     (i, theta; j, theta', x |= Fpow_emp sigma ell, var v)) ->
-  x = Vtt \/ Var_omega x = true.
+  x = Vtt \/ Var_omega x.
 Proof.
   intros x v i j theta theta' [ell H].
   apply Fpow_emp_implies_x_tt_Var_omega with ell v i j theta theta'.
@@ -384,7 +383,7 @@ Proof.
   rewrite sigma_Vtt;
   apply tt_loop_exists;
   assumption.
-  + (* When Var_omega v = true /\ x = v *)
+  + (* When Var_omega v /\ x = v *)
   destruct Hm as [Homega [EQxv [EQij EQth]]];
   rewrite EQxv;
   rewrite EQij;
@@ -395,7 +394,7 @@ Qed.
 Lemma moveStar_implies_models_fin :
   forall x v i j theta theta',
   moveStar (A:=A) (sigma v, theta, i) (sigma x, theta', j) ->
-  (x = Vtt \/ Var_omega x = true) ->
+  (x = Vtt \/ Var_omega x) ->
   exists ell : nat,
     (i, theta; j, theta', x |= Fpow_emp sigma ell, var v).
 Proof.
@@ -424,7 +423,7 @@ Proof.
   rewrite sigma_Vtt in EQsv;
   rewrite <- EQsv.
   apply models_fin_TT; auto.
-  + (* When Var_omega x = true *)
+  + (* When Var_omega x *)
   apply sigma_injective_on_Var_omega in EQsv as EQxv;
   auto.
   rewrite <- EQxv.
@@ -633,7 +632,7 @@ Qed.
 Lemma models_implies_acceptingLoop' :
   forall v i theta,
   (i, theta |= lfpF sigma, var v) ->
-  (v = Vtt \/ Var_omega v = true) ->
+  (v = Vtt \/ Var_omega v) ->
   acceptingLoop' (A:=A) (sigma v, theta, i).
 Proof.
   cofix Hcofix.

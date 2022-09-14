@@ -76,7 +76,7 @@ Axiom sigmaA_R :
 
 Axiom sigmaA_Var_omega :
   forall q,
-  finals A q <-> Var_omega (QVar q) = true.
+  finals A q <-> Var_omega (QVar q).
 
 
 Lemma deltaq_neq_nil :
