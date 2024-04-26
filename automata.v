@@ -213,7 +213,7 @@ Proof.
   - rewrite EQc2 in IH;
   specialize (IH (refl_equal (q2, th2, j))).
   destruct c3 as [[q3 th3] i3].
-  apply le_trans with i3.
+  apply Nat.le_trans with i3.
   + rewrite EQc1 in Hmov.
   now apply move_must_go_forward with q1 q3 th1 th3.
   + apply IH with q3 th3; auto.
