@@ -430,8 +430,7 @@ Proof.
   right; auto.
 
   - (* When move c1 c3 /\ moveStar c3 c2 *)
-  rewrite EQc2 in IH;
-  specialize (IH (refl_equal (sigma x, theta', j))).
+  specialize (IH EQc2).
   rewrite EQc1 in Hmov; clear c1 EQc1.
   rewrite EQc2 in Hstar; clear c2 EQc2.
 
