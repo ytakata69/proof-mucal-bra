@@ -636,7 +636,7 @@ Lemma models_implies_acceptingLoop' :
 Proof.
   cofix Hcofix.
   intros v i theta H Hf.
-  inversion H as [i1 j th1 th2 x v1 HF Hij Hchain EQi1 EQth1 EQv1 | | |];
+  inversion H as [i1 j th1 th2 x v1 HF Hij Hchain EQi1 EQth1 EQv1];
   clear i1 EQi1 th1 EQth1 v1 EQv1.
   apply lfpF_is_sup_Fpow with sigma v i j theta th2 x in HF;
   destruct HF as [ell HF].
@@ -659,7 +659,7 @@ Theorem models_implies_accepting' :
   accepting' (A:=A) (sigma v, theta, i).
 Proof.
   intros v i theta H.
-  inversion H as [i1 j th1 th2 x v1 HF Hij Hm EQi1 EQth1 EQv1| | |];
+  inversion H as [i1 j th1 th2 x v1 HF Hij Hm EQi1 EQth1 EQv1];
   clear th1 EQth1 i1 EQi1 v1 EQv1.
   apply lfpF_is_sup_Fpow with sigma v i j theta th2 x in HF;
   destruct HF as [ell HF].

@@ -105,6 +105,7 @@ CoInductive models (u : Env)
       i < j ->
       models u j theta' (var x) ->
       models u i theta (var v)
+  (*
   | models_OR : forall i theta psi1 psi2,
       models u i theta psi1 \/
       models u i theta psi2 ->
@@ -116,17 +117,13 @@ CoInductive models (u : Env)
   | models_PHI : forall i theta phi,
       models_phi i theta phi ->
       models u i theta (φ phi)
+  *)
   .
 
 Notation "'(' i ',' theta '|=' u ',' psi ')'"
   := (models u i theta psi).
 
-(* Equality of two ltl formulas *)
-
-Axiom ltl_extensionality :
-  forall psi1 psi2 : ltl,
-    (forall i theta u, (i, theta |= u, psi1) <-> (i, theta |= u, psi2))
-    -> psi1 = psi2.
+(* Equality of two assignments *)
 
 Axiom Theta_extensionality :
   forall theta1 theta2 : Theta,
@@ -141,6 +138,14 @@ Proof.
   intro r.
   now unfold updateR.
 Qed.
+
+(*
+(* Equality of two ltl formulas *)
+
+Axiom ltl_extensionality :
+  forall psi1 psi2 : ltl,
+    (forall i theta u, (i, theta |= u, psi1) <-> (i, theta |= u, psi2))
+    -> psi1 = psi2.
 
 Lemma phi_eq_xtt_phi : forall phi : ltl_phi,
   (φ phi) = ↓ nil ,X (φ [tt]) ../\ phi.
@@ -181,6 +186,7 @@ Proof.
   unfold models_atom in H3.
   contradiction.
 Qed.
+*)
 
 (* Semantics on finite sequences *)
 
