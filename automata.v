@@ -499,36 +499,11 @@ Proof.
   apply IH.
 
   + (* When sigma v = (φ [tt]) *)
-  inversion Hmov
-    as [phi' R' i1 q1 q2 th Ht Hm [EQq1 EQth EQi1] [EQq2 EQth3 EQi3]
-       |i1 q1 q2 th Ht [EQq1 EQth EQi1] [EQq2 EQth3 EQi3]];
-  clear q1 EQq1 th EQth i1 EQi1;
-  clear q2 EQq2;
-  inversion Ht
-    as [EQtt EQphi' EQR' EQq3| | |];
-  clear EQtt.
-  rewrite <- EQR' in Ht;
-  rewrite <- EQR' in EQth3;
-  rewrite <- EQphi' in Ht;
-  rewrite <- EQphi' in Hm;
-  clear R' EQR' phi' EQphi'.
-  rewrite <- EQq3 in Hmov;
-  rewrite <- EQq3 in Ht;
-  rewrite <- EQq3 in Hstar;
-  rewrite <- EQq3 in IH;
-  clear q3 EQq3.
-  rewrite <- EQi3 in Hmov;
-  rewrite <- EQi3 in Hstar;
-  rewrite <- EQi3 in IH;
-  clear i3 EQi3.
-  rewrite updateR_nil in EQth3.
-  rewrite <- EQth3 in Hmov;
-  rewrite <- EQth3 in Hstar;
-  rewrite <- EQth3 in IH;
-  clear th3 EQth3.
-
-  apply tt_loop_keeps_registers in Hstar as Htheta'.
-  destruct Htheta' as [EQsx EQtheta'].
+  clear IH.
+  assert (Hstar' : moveStar (A:=A) ((φ [tt]), theta, i) (sigma x, theta', j)).
+  { now apply move_moveStar with (c2:=(q3,th3,i3)). }
+  apply tt_loop_keeps_registers in Hstar'.
+  destruct Hstar' as [EQsx EQtheta'].
   rewrite <- EQtheta'.
   assert (Hx : x = Vtt).
   { destruct Hf as [Hf | Hf]; auto.
@@ -537,19 +512,11 @@ Proof.
     rewrite EQsx.
     now rewrite sigma_Vtt.
   }
-
-  rewrite EQsv in IH.
-  apply moveStar_must_go_forward in Hstar as HSij.
-  specialize (IH v (S i) HSij theta (refl_equal (sigma v, theta, S i))).
-  destruct IH as [ell IH].
-  exists (S ell).
-
-  apply models_fin_var; auto.
-  unfold Fpow;
-  unfold F.
-  rewrite <- EQsv.
-  rewrite Hx.
+  exists 1.
+  apply models_fin_var; [apply Hij |].
+  unfold Fpow.
   left.
+  rewrite <- EQsv, Hx.
   now apply models_fin_TT.
 Qed.
 
