@@ -139,55 +139,6 @@ Proof.
   now unfold updateR.
 Qed.
 
-(*
-(* Equality of two ltl formulas *)
-
-Axiom ltl_extensionality :
-  forall psi1 psi2 : ltl,
-    (forall i theta u, (i, theta |= u, psi1) <-> (i, theta |= u, psi2))
-    -> psi1 = psi2.
-
-Lemma phi_eq_xtt_phi : forall phi : ltl_phi,
-  (φ phi) = ↓ nil ,X (φ [tt]) ../\ phi.
-Proof.
-  intro phi.
-  apply ltl_extensionality.
-  intros i theta u;
-  split; intro H.
-  - (* phi -> Xtt ../\ phi *)
-  apply models_STORE_X.
-  + (* models_phi i theta phi *)
-  now inversion H.
-  + (* tt *)
-  apply models_PHI.
-  now apply models_pos.
-  - (* Xtt ../\ phi -> phi *)
-  apply models_PHI.
-  now inversion H.
-Qed.
-
-Lemma psi_eq_psi_or_ff : forall psi : ltl,
-  psi = (psi .\/ (φ ~[tt])).
-Proof.
-  intro psi.
-  apply ltl_extensionality.
-  intros i theta u;
-  split; intro H.
-  - (* psi -> psi .\/ ff *)
-  apply models_OR.
-  now left.
-  - (* psi .\/ ff -> psi *)
-  inversion H as [|j th p1 p2 H1| |].
-  destruct H1 as [H1 | H1]; auto.
-  clear H2;
-  inversion H1 as [| | |j' th' p1' H2].
-  clear H3;
-  inversion H2 as [|a H3|].
-  unfold models_atom in H3.
-  contradiction.
-Qed.
-*)
-
 (* Semantics on finite sequences *)
 
 Inductive models_fin (u : Env)
@@ -499,6 +450,199 @@ Axiom sigma_injective_on_Var_omega :
   Var_omega v1 ->
   sigma v1 = sigma v2 -> v1 = v2.
 
+Section LTL_equality.
+
+(* Equality of two ltl formulas *)
+
+Variable sigma : eqn_sys.
+Variable ell : nat.
+Hypothesis Hell : ell >= 1.
+Let u := Fpow_emp sigma ell.
+
+Lemma Hell' :
+  exists ell', ell = S ell'.
+Proof.
+  destruct ell as [| ell'].
+  - unfold ge in Hell.
+    now apply Nat.nle_succ_0 in Hell.
+  - now exists ell'.
+Qed.
+
+(* Vtt can be seen as the same as tt *)
+Lemma always_models_Vtt :
+  forall i theta,
+    (i, theta |= u, var Vtt).
+Proof.
+  intros i theta.
+  generalize dependent i.
+  cofix Hcofix.
+  intros i.
+  apply models_var with (j:=S i) (theta':=theta) (x:=Vtt).
+  - destruct Hell' as [ell' Hell'].
+    unfold u, Fpow_emp, Fpow.
+    rewrite Hell'.
+    left.
+    rewrite sigma_Vtt.
+    apply models_fin_TT.
+    apply Nat.le_succ_diag_r.
+  - apply Nat.lt_succ_diag_r.
+  - apply Hcofix.
+Qed.
+
+Lemma tt_eq_Vtt :
+  forall i theta,
+    models_phi i theta [tt]
+    <-> (i, theta |= u, var Vtt).
+Proof.
+  intros i theta.
+  split.
+  - (* -> *)
+    intros H.
+    now apply always_models_Vtt.
+  - (* <- *)
+    intros H.
+    apply models_pos.
+    now unfold models_atom.
+Qed.
+
+Lemma phi_eq_xtt_phi :
+  forall phi : ltl_phi,
+  forall Vphi,
+    sigma Vphi = (↓ nil ,X (φ [tt]) ../\ phi) ->
+  forall i theta,
+    models_phi i theta phi
+    <-> (i, theta |= u, var Vphi).
+Proof.
+  intros phi Vphi EQvp.
+  intros i theta.
+  destruct Hell' as [ell' Hell'].
+  split; intro H.
+  - (* phi -> Xtt ../\ phi *)
+    unfold u, Fpow_emp, Fpow.
+    rewrite Hell'.
+    apply models_var with (j:=S i) (theta':=theta) (x:=Vtt).
+    + left.
+      rewrite EQvp.
+      apply models_fin_STORE_X.
+      * apply Nat.lt_succ_diag_r.
+      * apply H.
+      * rewrite updateR_nil.
+        now apply models_fin_TT.
+    + apply Nat.lt_succ_diag_r.
+    + assert (Htt := always_models_Vtt).
+      specialize (Htt (S i) theta).
+      unfold u, Fpow_emp in Htt.
+      rewrite Hell' in Htt.
+      unfold Fpow in Htt.
+      apply Htt.
+  - (* Xtt ../\ phi -> phi *)
+    inversion H as
+      [i1 j th1 th2 x y Hu Hij Hx EQi1 EQth1 EQy];
+    clear i1 EQi1 th1 EQth1 y EQy.
+    unfold u, Fpow_emp in Hu.
+    rewrite Hell' in Hu.
+    unfold Fpow, F in Hu.
+    destruct Hu as [Hu | Hu].
+    + (* when (i, theta; j, th2, x |= sigma Vphi) *)
+      rewrite EQvp in Hu.
+      now inversion Hu.
+    + (* when x = Vphi /\ (i,theta) = (j,th2) *)
+      destruct Hu as [_ [_ [EQij _]]].
+      rewrite EQij in Hij.
+      now apply Nat.lt_irrefl in Hij.
+Qed.
+
+Lemma psi_eq_psi_or_ff :
+  forall psi : ltl,
+  forall V1 V2,
+    sigma V1 = psi ->
+    sigma V2 = (psi .\/ (φ ~[tt])) ->
+    (Var_omega V1 <-> Var_omega V2) ->
+  forall i theta,
+    (i, theta |= u, var V1)
+    <-> (i, theta |= u, var V2).
+Proof.
+  intros psi V1 V2 EQv1 EQv2 Hvo i theta.
+  destruct Hell' as [ell' Hell'].
+  unfold u, Fpow_emp.
+  rewrite Hell'.
+
+  split; intro H.
+  - (* psi -> psi .\/ ff *)
+    generalize dependent theta.
+    generalize dependent i.
+    cofix Hcofix.
+
+    intros i theta H.
+    inversion H as
+      [i1 j th1 th2 x y Hu Hij Hx EQi1 EQth1 EQy];
+    clear i1 EQi1 th1 EQth1 y EQy.
+    unfold Fpow, F in Hu.
+    destruct Hu as [Hu | Hu].
+    + apply models_var with (j:=j) (theta':=th2) (x:=x);
+      auto.
+      unfold Fpow, F.
+      rewrite EQv1 in Hu.
+      rewrite EQv2.
+      left.
+      apply models_fin_OR.
+      * now apply Nat.lt_le_incl.
+      * now left.
+    + destruct Hu as [Ho1 [EQx [EQij EQtheta]]].
+      apply models_var with (j:=j) (theta':=th2) (x:=V2);
+      auto.
+      * rewrite EQij, EQtheta.
+        apply Hvo in Ho1.
+        unfold Fpow, F.
+        now right.
+      * rewrite EQx in Hx.
+        now apply Hcofix.
+  - (* psi .\/ ff -> psi *)
+    generalize dependent theta.
+    generalize dependent i.
+    cofix Hcofix.
+
+    intros i theta H.
+    inversion H as
+      [i1 j th1 th2 x y Hu Hij Hx EQi1 EQth1 EQy];
+    clear i1 EQi1 th1 EQth1 y EQy.
+    unfold Fpow, F in Hu.
+    destruct Hu as [Hu | Hu].
+    + apply models_var with (j:=j) (theta':=th2) (x:=x);
+      auto.
+      unfold Fpow, F.
+      rewrite EQv2 in Hu.
+      rewrite EQv1.
+      left.
+      inversion Hu as [
+        | i' j' th1' th2' x' p1' p2' Hij' Hu'
+          EQi' EQj' EQth1' EQth2' EQx' [EQp1' EQp2'] | | |];
+      clear i' EQi' j' EQj' th1' EQth1' th2' EQth2'
+            x' EQx' p1' EQp1' p2' EQp2'
+            Hu Hij'.
+      destruct Hu' as [Hu | Hu]; auto.
+      inversion Hu as [| | |
+        | i' j' th1' p1' Htt Hij' Hmo
+          EQi' EQj' EQth1' EQth2 EQx EQp1'];
+      clear i' EQi' j' EQj' th1' EQth1' p1' EQp1'
+            Htt.
+      inversion Hmo as [| a Hmo' EQa |];
+      clear a EQa.
+      assert (Htt : models_atom i th2 tt).
+      { now unfold models_atom. }
+      now apply Hmo' in Htt.
+    + destruct Hu as [Ho2 [EQx [EQij EQtheta]]].
+      apply models_var with (j:=j) (theta':=th2) (x:=V1);
+      auto.
+      * rewrite EQij, EQtheta.
+        apply Hvo in Ho2.
+        unfold Fpow, F.
+        now right.
+      * rewrite EQx in Hx.
+        now apply Hcofix.
+Qed.
+
+End LTL_equality.
 
 (* Normalized LTL formulas *)
 
