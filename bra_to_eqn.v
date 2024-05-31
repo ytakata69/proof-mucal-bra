@@ -181,6 +181,17 @@ Proof.
   now apply QDVar_neq_RVar in Hrqd.
 Qed.
 
+Lemma sigmaA_QDVar_sublist :
+  forall l l',
+    sigmaA_QDVar (l ++ l') -> sigmaA_QDVar l'.
+Proof.
+  intros l l' H.
+  induction l as [| [[[q a] R] q'] l IH];
+    simpl in H; auto.
+  destruct H as [_ H].
+  apply IH, H.
+Qed.
+
 Section CorrectnessOfSigmaA.
 
 (*** AA is the automaton obtained from sigmaA ***)
@@ -345,6 +356,160 @@ Lemma Q_eq_dec :
 Proof.
   intros q1 q2;
   apply excluded_middle.
+Qed.
+
+(* Reachable states *)
+
+Definition sigmaA_Var_state (q : states AA) : Prop :=
+  (exists q', q = sigmaA (QVar q')) \/
+  (exists q' a R q'', q = sigmaA (RVar q' a R q'') /\
+    transitions A q' a R q'') \/
+  (exists q' l l', q = sigmaA (QDVar l) /\
+    l' ++ l = deltaq q').
+
+Lemma sigmaA_Var_state_can_only_move_to_sigmaA_Var_state :
+  forall q1 q2 th th' i j,
+    move (A:=AA) (q1, th, i) (q2, th', j) ->
+    sigmaA_Var_state q1 ->
+    sigmaA_Var_state q2.
+Proof.
+  intros q1 q2 th th' i j Hm Hq1.
+  unfold sigmaA_Var_state in Hq1.
+  destruct Hq1 as [Hq1 | [Hq1 | Hq1]].
+  + (* when q1 = sigmaA (QVar q') *)
+    destruct Hq1 as [q' Hq1].
+    rewrite Hq1 in Hm.
+    destruct (sigmaA_Q q') as [EQsa _].
+    inversion Hm as
+      [phi R i'1 q'1 q'2 th'1 Ht Hmp
+        [EQq'1 EQth'1 EQi'1] [EQq'2 EQth1 EQi']
+      | i'1 q'1 q'2 th'1 Ht
+        [EQq'1 EQth'1 EQi'1] [EQq'2 EQth1 EQi']];
+      clear i'1 EQi'1 q'1 EQq'1 q'2 EQq'2 th'1 EQth'1.
+    * (* when non-epsilon-transition *)
+      inversion Ht as [EQsa' EQphi EQR EQq1' | |
+        | R' v phi' EQsa' EQphi' EQR' EQv];
+        rewrite EQsa in EQsa';
+        inversion EQsa'.
+    * (* when epsilon-transition *)
+      inversion Ht as [| v1 v2 EQsa' EQeps EQnil EQq1'
+        | v1 v2 EQsa' EQeps EQnil EQq1' |];
+        clear EQeps EQnil;
+        rewrite EQsa in EQsa';
+        injection EQsa';
+        intros EQv2 EQv1;
+        [rewrite EQv1 | rewrite EQv2];
+        right; right;
+        exists q', (deltaq q'), nil; auto.
+  + (* when q1 = sigmaA (RVar q' a R q'') *)
+    destruct Hq1 as [q' [a [R [q'' [Hq1 Hta]]]]].
+    destruct a as [| phi];
+      [(apply epsilon_free in Hta; contradiction) |].
+    assert (EQsa := sigmaA_R q' phi R q'' Hta).
+    rewrite Hq1 in Hm.
+    inversion Hm as
+      [phi' R' i'1 q'1 q'2 th'1 Ht Hmp
+        [EQq'1 EQth'1 EQi'1] [EQq'2 EQth EQi]
+      | i'1 q'1 q'2 th'1 Ht
+        [EQq'1 EQth'1 EQi'1] [EQq'2 EQth EQi]];
+      clear i'1 EQi'1 q'1 EQq'1 q'2 EQq'2 th'1 EQth'1.
+    * (* when non-epsilon-transition *)
+      inversion Ht as [EQsa' EQphi EQR' EQq2 | |
+        | R'' v phi'' EQsa' EQphi' EQR' EQq2];
+        rewrite EQsa in EQsa'.
+      -- inversion EQsa'.
+      -- injection EQsa';
+        intros EQphi'' EQv EQR''.
+        rewrite EQv.
+        left.
+        now exists q''.
+    * (* when epsilon-transition *)
+      inversion Ht as [| v1 v2 EQsa' EQeps EQnil EQq1'
+        | v1 v2 EQsa' EQeps EQnil EQq1' |];
+        clear EQeps EQnil;
+        rewrite EQsa in EQsa';
+        inversion EQsa'.
+  + (* when q1 = sigmaA (QDVar l) *)
+    destruct Hq1 as [q [l [l' [Hq1 Hl]]]].
+    destruct (sigmaA_Q q) as [EQsaq EQsa].
+    rewrite <- Hl in EQsa.
+    apply sigmaA_QDVar_sublist in EQsa.
+    rewrite Hq1 in Hm.
+    inversion Hm as
+      [phi' R' i'1 q'1 q'2 th'1 Ht Hmp
+        [EQq'1 EQth'1 EQi'1] [EQq'2 EQth EQi]
+      | i'1 q'1 q'2 th'1 Ht
+        [EQq'1 EQth'1 EQi'1] [EQq'2 EQth EQi]];
+      clear i'1 EQi'1 q'1 EQq'1 q'2 EQq'2 th'1 EQth'1.
+    * (* when non-epsilon-transition *)
+      inversion Ht as [EQsa' EQphi EQR' EQq2 | |
+        | R'' v phi'' EQsa' EQphi' EQR' EQq2];
+        destruct l as [| [[[q' a] R] q''] l];
+        [| destruct EQsa as [EQsa _] |
+         | destruct EQsa as [EQsa _]];
+        rewrite EQsa in EQsa';
+        inversion EQsa'.
+    * (* when epsilon-transition *)
+      inversion Ht as [| v1 v2 EQsa' EQeps EQnil EQq1'
+        | v1 v2 EQsa' EQeps EQnil EQq1' |];
+        clear EQeps EQnil;
+        destruct l as [| [[[q' a] R] q''] l];
+        [(rewrite EQsa in EQsa'; inversion EQsa') | |
+         (rewrite EQsa in EQsa'; inversion EQsa') |];
+        destruct EQsa as [EQsa _];
+        rewrite EQsa in EQsa';
+        injection EQsa';
+        intros EQv2 EQv1;
+        [rewrite EQv1 | rewrite EQv2].
+      -- (* to show sigmaA_Var_state (sigmaA (RVar q' a R q'')) *)
+        right; left.
+        exists q', a, R, q''.
+        split; auto.
+        assert (Hin: In (q', a, R, q'') (deltaq q)).
+        {
+          rewrite <- Hl.
+          apply in_or_app.
+          right.
+          apply in_eq.
+        }
+        apply deltaq_inv in Hin.
+        destruct Hin as [EQq Hin].
+        apply Hin.
+      -- (* to show sigmaA_Var_state (sigmaA (QDVar l)) *)
+        right; right.
+        exists q, l, (l' ++ ((q',a,R,q'')::nil)).
+        split; auto.
+        rewrite <- Hl.
+        rewrite app_ass.
+        now simpl.
+Qed.
+
+Theorem only_sigmaA_Var_states_are_reachable :
+  forall q1 q2 th th' i j,
+    moveStar (A:=AA) (q1, th, i) (q2, th', j) ->
+    sigmaA_Var_state q1 ->
+    sigmaA_Var_state q2.
+Proof.
+  intros q1 q2 th th' i j Hm Hq1.
+  remember (q1, th,  i) as c1 eqn: EQc1;
+  remember (q2, th', j) as c2 eqn: EQc2.
+  generalize dependent i;
+  generalize dependent th;
+  generalize dependent q1.
+  induction Hm as [c1 | c1 c2 c3 H12 H23 IH];
+    intros q1 Hq1 th i EQc1.
+  - (* base case (c1 = c2) *)
+    rewrite EQc1 in EQc2.
+    injection EQc2;
+      intros EQi EQth EQq2.
+    now rewrite <- EQq2.
+  - (* inductive step *)
+    specialize (IH EQc2).
+    destruct c2 as [[q2' th2] i2].
+    rewrite EQc1 in H12.
+    apply sigmaA_Var_state_can_only_move_to_sigmaA_Var_state in H12;
+    auto.
+    now apply (IH _ H12 th2 i2).
 Qed.
 
 (*** (move AA)^+ not going thru sigmaA QVar ***)
