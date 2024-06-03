@@ -440,10 +440,8 @@ End LeastFixedPoint.
 Axiom sigma_Vtt : forall sigma : eqn_sys,
   sigma Vtt = (φ [tt]).
 
-Axiom tt_Vtt_or_Var_omega :
-  forall (sigma : eqn_sys) (v : Var),
-  sigma v = (φ [tt]) ->
-  v = Vtt \/ Var_omega v.
+Axiom Vtt_is_Var_omega :
+  Var_omega Vtt.
 
 Axiom sigma_injective_on_Var_omega :
   forall (sigma : eqn_sys) (v1 v2 : Var),

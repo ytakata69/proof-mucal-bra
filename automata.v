@@ -114,8 +114,7 @@ Inductive RuleA (sigma : eqn_sys)
 
 Inductive FinalA (sigma : eqn_sys)
   : ltl -> Prop :=
-  | FinalA_TT  : FinalA sigma (φ [tt])
-  | FinalA_Var_omega : forall v : Var,
+  | FinalA_intro : forall v : Var,
     Var_omega v -> FinalA sigma (sigma v)
   .
 
@@ -261,24 +260,19 @@ Proof.
   apply IH.
 Qed.
 
-Lemma FinalA_tt_Var_omega :
+Lemma FinalA_Var_omega :
   forall x,
-  FinalA sigma (sigma x) <-> x = Vtt \/ Var_omega x.
+  FinalA sigma (sigma x) <-> Var_omega x.
 Proof.
   intro x.
   split; intro H.
-  - inversion H as [Hsx|v Hv Hvx].
-  + symmetry in Hsx.
-  now apply tt_Vtt_or_Var_omega in Hsx.
-  + right.
+  - (* -> *)
+  inversion H as [v Hv Hvx].
   apply sigma_injective_on_Var_omega with sigma v x in Hv as EQvx;
   auto.
   now rewrite <- EQvx.
-  - destruct H as [H | H].
-  + rewrite H.
-  rewrite sigma_Vtt;
-  apply FinalA_TT.
-  + now apply FinalA_Var_omega.
+  - (* <- *)
+  now apply FinalA_intro.
 Qed.
 
 (* ------------------------------ *)
@@ -286,10 +280,10 @@ Qed.
 Hypothesis Hnormal :
   forall v : Var, isNormal (sigma v).
 
-Lemma Fpow_emp_implies_x_tt_Var_omega :
+Lemma Fpow_emp_implies_x_Var_omega :
   forall ell x v i j theta theta',
   Fpow_emp sigma ell v i j theta theta' x ->
-  x = Vtt \/ Var_omega x.
+  Var_omega x.
 Proof.
   unfold Fpow_emp.
   intros ell x.
@@ -315,21 +309,20 @@ Proof.
   now apply IHn with v1 (S i) j (updateR theta R (snd (Str_nth i w))) theta'.
   * (* When sigma v = φ [tt] *)
   inversion Hm;
-  left;
-  reflexivity.
-  + (* When Var_omega v = true /\ x = v *)
+  apply Vtt_is_Var_omega.
+  + (* When Var_omega v /\ x = v *)
   destruct Hm as [Homega [EQxv _]].
   rewrite EQxv; auto.
 Qed.
 
-Lemma x_is_either_tt_or_Var_omega :
+Lemma x_is_Var_omega :
   forall x v i j theta theta',
   (exists ell : nat,
     (i, theta; j, theta', x |= Fpow_emp sigma ell, var v)) ->
-  x = Vtt \/ Var_omega x.
+  Var_omega x.
 Proof.
   intros x v i j theta theta' [ell H].
-  apply Fpow_emp_implies_x_tt_Var_omega with ell v i j theta theta'.
+  apply Fpow_emp_implies_x_Var_omega with ell v i j theta theta'.
   now inversion H.
 Qed.
 
@@ -394,7 +387,7 @@ Qed.
 Lemma moveStar_implies_models_fin :
   forall x v i j theta theta',
   moveStar (A:=A) (sigma v, theta, i) (sigma x, theta', j) ->
-  (x = Vtt \/ Var_omega x) ->
+  Var_omega x ->
   exists ell : nat,
     (i, theta; j, theta', x |= Fpow_emp sigma ell, var v).
 Proof.
@@ -409,27 +402,18 @@ Proof.
   induction H as [c1 | c1 c3 c2 Hmov Hstar IH];
   intros v i Hij theta EQc1.
 
-  - (* When c1 = c2 *)
+  - (* base case (c1 = c2) *)
   rewrite EQc2 in EQc1; clear EQc2.
   inversion EQc1 as [[EQsv EQth EQji]].
   exists 1.
   unfold Fpow.
   apply models_fin_var; auto.
-  destruct Hf as [Hf | Hf].
-  + (* When x = Vtt *)
-  left.
-  rewrite Hf.
-  rewrite Hf in EQsv;
-  rewrite sigma_Vtt in EQsv;
-  rewrite <- EQsv.
-  apply models_fin_TT; auto.
-  + (* When Var_omega x *)
   apply sigma_injective_on_Var_omega in EQsv as EQxv;
   auto.
   rewrite <- EQxv.
   right; auto.
 
-  - (* When move c1 c3 /\ moveStar c3 c2 *)
+  - (* inductive step (move c1 c3 /\ moveStar c3 c2) *)
   specialize (IH EQc2).
   rewrite EQc1 in Hmov; clear c1 EQc1.
   rewrite EQc2 in Hstar; clear c2 EQc2.
@@ -506,7 +490,7 @@ Proof.
   destruct Hstar' as [EQsx EQtheta'].
   rewrite <- EQtheta'.
   assert (Hx : x = Vtt).
-  { destruct Hf as [Hf | Hf]; auto.
+  {
     apply sigma_injective_on_Var_omega with sigma;
     auto.
     rewrite EQsx.
@@ -535,13 +519,13 @@ Proof.
   split.
   + apply models_fin_implies_moveStar with ell.
   now apply models_fin_var.
-  + apply FinalA_tt_Var_omega.
-  apply x_is_either_tt_or_Var_omega with v i j theta theta'.
+  + apply FinalA_Var_omega.
+  apply x_is_Var_omega with v i j theta theta'.
   exists ell.
   now apply models_fin_var.
   - (* <- *)
   destruct H as [Hm Hf].
-  apply FinalA_tt_Var_omega in Hf.
+  apply FinalA_Var_omega in Hf.
   apply models_fin_var.
   + now apply moveStar_must_go_forward in Hm.
   + apply lfpF_is_sup_Fpow.
@@ -567,7 +551,7 @@ Proof.
   apply models_var with j th2 v; try assumption.
   + now apply lfpF_is_upperbound_Fpow with ell.
   + now apply Hcofix.
-  - now apply FinalA_tt_Var_omega.
+  - now apply FinalA_Var_omega.
 Qed.
 
 Theorem accepting_implies_models :
@@ -591,14 +575,14 @@ Proof.
   apply lfpF_is_upperbound_Fpow with ell.
   inversion Hstar;
   assumption.
-  - apply FinalA_tt_Var_omega.
+  - apply FinalA_Var_omega.
   now inversion Ha.
 Qed.
 
 Lemma models_implies_acceptingLoop' :
   forall v i theta,
   (i, theta |= lfpF sigma, var v) ->
-  (v = Vtt \/ Var_omega v) ->
+  Var_omega v ->
   acceptingLoop' (A:=A) (sigma v, theta, i).
 Proof.
   cofix Hcofix.
@@ -607,11 +591,11 @@ Proof.
   clear i1 EQi1 th1 EQth1 v1 EQv1.
   apply lfpF_is_sup_Fpow with sigma v i j theta th2 x in HF;
   destruct HF as [ell HF].
-  apply Fpow_emp_implies_x_tt_Var_omega in HF as Hfx;
-  apply FinalA_tt_Var_omega in Hfx as Hfx'.
+  apply Fpow_emp_implies_x_Var_omega in HF as Hfx;
+  apply FinalA_Var_omega in Hfx as Hfx'.
 
   assert (Hf' : FinalA sigma (sigma v)).
-  { apply FinalA_tt_Var_omega; auto. }
+  { apply FinalA_Var_omega; auto. }
   apply (acceptingLoop'_intro (A:=A)) with (q2:=sigma x) (th2:=th2) (j:=j);
   try assumption.
   - apply models_fin_implies_moveStar with ell.
@@ -636,7 +620,7 @@ Proof.
   apply models_fin_var; auto.
   now apply Nat.lt_le_incl.
   - apply models_implies_acceptingLoop'; auto.
-  now apply Fpow_emp_implies_x_tt_Var_omega in HF.
+  now apply Fpow_emp_implies_x_Var_omega in HF.
 Qed.
 
 End CorrectnessOfEqnBRA.
