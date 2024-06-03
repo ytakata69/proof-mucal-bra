@@ -280,52 +280,6 @@ Qed.
 Hypothesis Hnormal :
   forall v : Var, isNormal (sigma v).
 
-Lemma Fpow_emp_implies_x_Var_omega :
-  forall ell x v i j theta theta',
-  Fpow_emp sigma ell v i j theta theta' x ->
-  Var_omega x.
-Proof.
-  unfold Fpow_emp.
-  intros ell x.
-  induction ell as [| n IHn];
-  intros v i j theta theta' H.
-  - (* When ell = 0 *)
-  unfold Fpow in H;
-  inversion H.
-  - (* When ell = S n *)
-  inversion H as [Hm | Hm].
-  + (* When (i,theta;j,theta',x |= sigma v) *)
-  assert (Hn := Hnormal v).
-  destruct Hn as [v1 v2 | R v1 phi |].
-  * (* When sigma v = var v1 .\/ var v2 *)
-  inversion_clear Hm as [| i1 i2 t1 t2 x1 p1 p2 _ Hm' | | |].
-  destruct Hm' as [Hm' | Hm'];
-  inversion Hm'.
-  -- now apply IHn with v1 i j theta theta'.
-  -- now apply IHn with v2 i j theta theta'.
-  * (* When sigma v = ↓ R ,X var v1 ../\ phi *)
-  inversion_clear Hm as [| | i1 i2 t1 t2 x1 R1 p1 p2 Hij Hp Hm'| |];
-  inversion Hm';
-  now apply IHn with v1 (S i) j (updateR theta R (snd (Str_nth i w))) theta'.
-  * (* When sigma v = φ [tt] *)
-  inversion Hm;
-  apply Vtt_is_Var_omega.
-  + (* When Var_omega v /\ x = v *)
-  destruct Hm as [Homega [EQxv _]].
-  rewrite EQxv; auto.
-Qed.
-
-Lemma x_is_Var_omega :
-  forall x v i j theta theta',
-  (exists ell : nat,
-    (i, theta; j, theta', x |= Fpow_emp sigma ell, var v)) ->
-  Var_omega x.
-Proof.
-  intros x v i j theta theta' [ell H].
-  apply Fpow_emp_implies_x_Var_omega with ell v i j theta theta'.
-  now inversion H.
-Qed.
-
 Lemma models_fin_implies_moveStar :
   forall ell,
   forall x v i j theta theta',
@@ -520,7 +474,7 @@ Proof.
   + apply models_fin_implies_moveStar with ell.
   now apply models_fin_var.
   + apply FinalA_Var_omega.
-  apply x_is_Var_omega with v i j theta theta'.
+  apply x_is_Var_omega with sigma v i j theta theta'.
   exists ell.
   now apply models_fin_var.
   - (* <- *)

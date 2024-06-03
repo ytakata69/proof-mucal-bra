@@ -448,9 +448,110 @@ Axiom sigma_injective_on_Var_omega :
   Var_omega v1 ->
   sigma v1 = sigma v2 -> v1 = v2.
 
-Section LTL_equality.
+Section SyntacticalProperties.
+
+Variable sigma : eqn_sys.
+
+Lemma models_fin_implies_x_Var_omega :
+  forall ell x psi i j theta theta',
+  (i, theta; j, theta', x |= Fpow_emp sigma ell, psi) ->
+  Var_omega x.
+Proof.
+  unfold Fpow_emp.
+  intros ell x.
+  induction ell as [| n IHn];
+    intros psi i j theta theta' H.
+  - (* base case (ell = 0) *)
+    generalize dependent i.
+    generalize dependent theta.
+    induction psi as [v | psi1 IH1 psi2 IH2
+      | R psi1 IH phi | phi];
+      intros theta i H.
+    + (* when psi = var v *)
+      inversion_clear H as [i' j' th th' x' v' Hij H'
+        | | | |].
+      inversion H'.
+    + (* when psi = psi1 .\/ psi2 *)
+      inversion_clear H as [| i' j' th th' x' p1 p2 Hij H'
+        | | |].
+      destruct H' as [H' | H'];
+        [ apply IH1 with theta i
+        | apply IH2 with theta i];
+        auto.
+    + (* when psi = ↓ R,X psi1 ../\ phi *)
+      inversion_clear H as [|
+        | i' j' th th' x' v psi1' phi' Hij Hm' H' | |].
+      now apply IH with (updateR theta R (snd (Str_nth i w))) (S i).
+    + (* when psi = φ phi *)
+      inversion H;
+      apply Vtt_is_Var_omega.
+  - (* inductive step (ell = S n) *)
+    generalize dependent i.
+    generalize dependent theta.
+    induction psi as [v | psi1 IH1 psi2 IH2
+      | R psi1 IH phi | phi];
+      intros theta i H.
+    + (* when psi = var v *)
+      inversion_clear H as [i' j' th th' x' v' Hij H'
+        | | | |].
+      inversion H' as [H | Hf].
+      * now apply IHn with (sigma v) i j theta theta'.
+      * destruct Hf as [Hvo [EQxv _]].
+        now rewrite EQxv.
+    + (* when psi = psi1 .\/ psi2 *)
+      inversion_clear H as [| i' j' th th' x' p1 p2 Hij H'
+        | | |].
+      destruct H' as [H' | H'];
+        [ apply IH1 with theta i
+        | apply IH2 with theta i];
+        auto.
+    + (* when psi = ↓ R,X psi1 ../\ phi *)
+      inversion_clear H as [|
+        | i' j' th th' x' v psi1' phi' Hij Hm' H' | |].
+      now apply IH with (updateR theta R (snd (Str_nth i w))) (S i).
+    + (* when psi = φ phi *)
+      inversion H;
+      apply Vtt_is_Var_omega.
+Qed.
+
+Lemma Fpow_emp_implies_x_Var_omega :
+  forall ell x v i j theta theta',
+  Fpow_emp sigma ell v i j theta theta' x ->
+  Var_omega x.
+Proof.
+  unfold Fpow_emp.
+  intros ell x.
+  induction ell as [| n IHn];
+    intros v i j theta theta' H.
+  - (* base case (ell = 0) *)
+    unfold Fpow in H;
+    inversion H.
+  - (* inductive step (ell = S n) *)
+    inversion H as [Hm | Hm].
+    + (* when (i,theta;j,theta',x |= sigma v) *)
+      now apply models_fin_implies_x_Var_omega
+        with n (sigma v) i j theta theta'.
+    + (* When Var_omega v /\ x = v *)
+      destruct Hm as [Homega [EQxv _]].
+      now rewrite EQxv.
+Qed.
+
+Lemma x_is_Var_omega :
+  forall x v i j theta theta',
+  (exists ell : nat,
+    (i, theta; j, theta', x |= Fpow_emp sigma ell, var v)) ->
+  Var_omega x.
+Proof.
+  intros x v i j theta theta' [ell H].
+  apply Fpow_emp_implies_x_Var_omega with ell v i j theta theta'.
+  now inversion H.
+Qed.
+
+End SyntacticalProperties.
 
 (* Equality of two ltl formulas *)
+
+Section LTL_equality.
 
 Variable sigma : eqn_sys.
 Variable ell : nat.
