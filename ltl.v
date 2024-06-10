@@ -1015,15 +1015,15 @@ Inductive unusedVar (v : Var)
   .
 
 Variables sigma1 sigma2 : eqn_sys.
-Variable vs : list Var.
+Variable vs : Ensemble Var.
 Hypothesis vs_not_in_sigma1 :
-  forall v, List.In v vs -> forall v', unusedVar v (sigma1 v').
+  forall v, In _ vs v -> forall v', unusedVar v (sigma1 v').
 Hypothesis sigma_equiv :
-  forall v, ~ List.In v vs -> sigma1 v = sigma2 v.
+  forall v, ~ In _ vs v -> sigma1 v = sigma2 v.
 
 Lemma unused_var_not_matter :
   forall ell i j theta theta' x,
-  forall v, ~ List.In v vs ->
+  forall v, ~ In _ vs v ->
     Fpow_emp sigma1 ell v i j theta theta' x
     <-> Fpow_emp sigma2 ell v i j theta theta' x.
 Proof.
@@ -1035,8 +1035,7 @@ Proof.
     reflexivity.
   - (* inductive step on ell *)
     assert (vs_not_in_sigma1_v:
-      forall v1, List.In v1 vs ->
-        unusedVar v1 (sigma1 v)).
+      forall v1, In _ vs v1 -> unusedVar v1 (sigma1 v)).
     {
       intros v1 Hv1.
       now apply vs_not_in_sigma1.
@@ -1060,7 +1059,7 @@ Proof.
       | l1 IH1 l2 IH2 | R l1 IH1 phi | phi];
       intros i j th th' x H.
     + (* when sigma1 v = var v' *)
-      assert (Hnv': ~ List.In v' vs).
+      assert (Hnv': ~ In _ vs v').
       {
         intros Hv'.
         specialize (vs_not_in_sigma1_v v' Hv').
@@ -1071,13 +1070,13 @@ Proof.
       apply models_fin_var; auto;
       apply IH; auto.
     + (* when sigma1 v = l1 .\/ l2 *)
-      assert (Hnvl1 : forall v1, List.In v1 vs -> unusedVar v1 l1).
+      assert (Hnvl1 : forall v1, In _ vs v1 -> unusedVar v1 l1).
       {
         intros v1 Hv1.
         specialize (vs_not_in_sigma1_v v1 Hv1).
         now inversion vs_not_in_sigma1_v.
       }
-      assert (Hnvl2 : forall v1, List.In v1 vs -> unusedVar v1 l2).
+      assert (Hnvl2 : forall v1, In _ vs v1 -> unusedVar v1 l2).
       {
         intros v1 Hv1.
         specialize (vs_not_in_sigma1_v v1 Hv1).
@@ -1091,7 +1090,7 @@ Proof.
       [left | right];
       [apply IH1 | apply IH2]; auto.
     + (* when sigma1 v = ↓ R,X l1 ../\ phi *)
-      assert (Hnvl1 : forall v1, List.In v1 vs -> unusedVar v1 l1).
+      assert (Hnvl1 : forall v1, In _ vs v1 -> unusedVar v1 l1).
       {
         intros v1 Hv1.
         specialize (vs_not_in_sigma1_v v1 Hv1).
@@ -1110,7 +1109,7 @@ Proof.
         apply models_fin_PHI; auto.
 
     + (* when sigma1 v = var v', for <- *)
-      assert (Hnv': ~ List.In v' vs).
+      assert (Hnv': ~ In _ vs v').
       {
         intros Hv'.
         specialize (vs_not_in_sigma1_v v' Hv').
@@ -1121,13 +1120,13 @@ Proof.
       apply models_fin_var; auto;
       apply IH; auto.
     + (* when sigma1 v = l1 .\/ l2, for <- *)
-      assert (Hnvl1 : forall v1, List.In v1 vs -> unusedVar v1 l1).
+      assert (Hnvl1 : forall v1, In _ vs v1 -> unusedVar v1 l1).
       {
         intros v1 Hv1.
         specialize (vs_not_in_sigma1_v v1 Hv1).
         now inversion vs_not_in_sigma1_v.
       }
-      assert (Hnvl2 : forall v1, List.In v1 vs -> unusedVar v1 l2).
+      assert (Hnvl2 : forall v1, In _ vs v1 -> unusedVar v1 l2).
       {
         intros v1 Hv1.
         specialize (vs_not_in_sigma1_v v1 Hv1).
@@ -1141,7 +1140,7 @@ Proof.
       [left | right];
       [apply IH1 | apply IH2]; auto.
     + (* when sigma1 v = ↓ R,X l1 ../\ phi, for <- *)
-      assert (Hnvl1 : forall v1, List.In v1 vs -> unusedVar v1 l1).
+      assert (Hnvl1 : forall v1, In _ vs v1 -> unusedVar v1 l1).
       {
         intros v1 Hv1.
         specialize (vs_not_in_sigma1_v v1 Hv1).
