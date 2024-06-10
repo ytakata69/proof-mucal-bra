@@ -999,25 +999,21 @@ End NormalForms.
 
 Section UnusedVar.
 
-Inductive unusedVar (v : Var)
-  : ltl -> Prop :=
-  | unusedVar_VAR (v1 : Var) :
-      v <> v1 -> unusedVar v (var v1)
-  | unusedVar_OR (p1 p2 : ltl) :
-      unusedVar v p1 ->
-      unusedVar v p2 ->
-      unusedVar v (p1 .\/ p2)
-  | unusedVar_STORE_X (R : list register) (psi : ltl) (phi : ltl_phi) :
-      unusedVar v psi ->
-      unusedVar v (↓ R,X psi ../\ phi)
-  | unusedVar_PHI (phi : ltl_phi) :
-      unusedVar v (φ phi)
+Inductive usedVar : ltl -> Ensemble Var :=
+  | usedVar_VAR : forall v,
+      In _ (usedVar (var v)) v
+  | usedVar_OR : forall v psi1 psi2,
+      In _ (Union _ (usedVar psi1) (usedVar psi2)) v
+      -> In _ (usedVar (psi1 .\/ psi2)) v
+  | usedVar_STORE_X : forall v R psi phi,
+      In _ (usedVar psi) v
+      -> In _ (usedVar (↓ R,X psi ../\ phi)) v
   .
 
 Variables sigma1 sigma2 : eqn_sys.
 Variable vs : Ensemble Var.
 Hypothesis vs_not_in_sigma1 :
-  forall v, In _ vs v -> forall v', unusedVar v (sigma1 v').
+  forall v, Included _ vs (Complement _ (usedVar (sigma1 v))).
 Hypothesis sigma_equiv :
   forall v, ~ In _ vs v -> sigma1 v = sigma2 v.
 
@@ -1034,13 +1030,7 @@ Proof.
     unfold Fpow_emp, Fpow.
     reflexivity.
   - (* inductive step on ell *)
-    assert (vs_not_in_sigma1_v:
-      forall v1, In _ vs v1 -> unusedVar v1 (sigma1 v)).
-    {
-      intros v1 Hv1.
-      now apply vs_not_in_sigma1.
-    }
-    clear vs_not_in_sigma1.
+    specialize (vs_not_in_sigma1 v).
     unfold Fpow_emp, Fpow, F.
     rewrite <- (sigma_equiv v Hv).
 
@@ -1062,25 +1052,28 @@ Proof.
       assert (Hnv': ~ In _ vs v').
       {
         intros Hv'.
-        specialize (vs_not_in_sigma1_v v' Hv').
-        inversion vs_not_in_sigma1_v as [v'' nEQv' | | |].
-        now apply nEQv'.
+        apply (vs_not_in_sigma1 v'); auto.
+        apply usedVar_VAR.
       }
       inversion H;
       apply models_fin_var; auto;
       apply IH; auto.
     + (* when sigma1 v = l1 .\/ l2 *)
-      assert (Hnvl1 : forall v1, In _ vs v1 -> unusedVar v1 l1).
+      assert (Hnvl1 :
+        Included _ vs (Complement _ (usedVar l1))).
       {
-        intros v1 Hv1.
-        specialize (vs_not_in_sigma1_v v1 Hv1).
-        now inversion vs_not_in_sigma1_v.
+        intros v1 Hv1 Hn.
+        apply (vs_not_in_sigma1 v1); auto.
+        apply usedVar_OR.
+        now apply Union_introl.
       }
-      assert (Hnvl2 : forall v1, In _ vs v1 -> unusedVar v1 l2).
+      assert (Hnvl2 :
+        Included _ vs (Complement _ (usedVar l2))).
       {
-        intros v1 Hv1.
-        specialize (vs_not_in_sigma1_v v1 Hv1).
-        now inversion vs_not_in_sigma1_v.
+        intros v1 Hv1 Hn.
+        apply (vs_not_in_sigma1 v1); auto.
+        apply usedVar_OR.
+        now apply Union_intror.
       }
       inversion_clear H as [
         | i' j' th1 th2 x' l1' l2' Hij H' EQi' EQj' EQth1 EQth2 EQx' [EQl1' EQl2']
@@ -1090,11 +1083,12 @@ Proof.
       [left | right];
       [apply IH1 | apply IH2]; auto.
     + (* when sigma1 v = ↓ R,X l1 ../\ phi *)
-      assert (Hnvl1 : forall v1, In _ vs v1 -> unusedVar v1 l1).
+      assert (Hnvl1 :
+        Included _ vs (Complement _ (usedVar l1))).
       {
-        intros v1 Hv1.
-        specialize (vs_not_in_sigma1_v v1 Hv1).
-        now inversion vs_not_in_sigma1_v.
+        intros v1 Hv1 Hn.
+        apply (vs_not_in_sigma1 v1); auto.
+        now apply usedVar_STORE_X.
       }
       inversion_clear H as [|
         | i' j' th1 th2 x' R' l1' phi' Hij Hphi H'
@@ -1112,25 +1106,28 @@ Proof.
       assert (Hnv': ~ In _ vs v').
       {
         intros Hv'.
-        specialize (vs_not_in_sigma1_v v' Hv').
-        inversion vs_not_in_sigma1_v as [v'' nEQv' | | |].
-        now apply nEQv'.
+        apply (vs_not_in_sigma1 v'); auto.
+        apply usedVar_VAR.
       }
       inversion H;
       apply models_fin_var; auto;
       apply IH; auto.
     + (* when sigma1 v = l1 .\/ l2, for <- *)
-      assert (Hnvl1 : forall v1, In _ vs v1 -> unusedVar v1 l1).
+      assert (Hnvl1 :
+        Included _ vs (Complement _ (usedVar l1))).
       {
-        intros v1 Hv1.
-        specialize (vs_not_in_sigma1_v v1 Hv1).
-        now inversion vs_not_in_sigma1_v.
+        intros v1 Hv1 Hn.
+        apply (vs_not_in_sigma1 v1); auto.
+        apply usedVar_OR.
+        now apply Union_introl.
       }
-      assert (Hnvl2 : forall v1, In _ vs v1 -> unusedVar v1 l2).
+      assert (Hnvl2 :
+        Included _ vs (Complement _ (usedVar l2))).
       {
-        intros v1 Hv1.
-        specialize (vs_not_in_sigma1_v v1 Hv1).
-        now inversion vs_not_in_sigma1_v.
+        intros v1 Hv1 Hn.
+        apply (vs_not_in_sigma1 v1); auto.
+        apply usedVar_OR.
+        now apply Union_intror.
       }
       inversion_clear H as [
         | i' j' th1 th2 x' l1' l2' Hij H' EQi' EQj' EQth1 EQth2 EQx' [EQl1' EQl2']
@@ -1140,11 +1137,12 @@ Proof.
       [left | right];
       [apply IH1 | apply IH2]; auto.
     + (* when sigma1 v = ↓ R,X l1 ../\ phi, for <- *)
-      assert (Hnvl1 : forall v1, In _ vs v1 -> unusedVar v1 l1).
+      assert (Hnvl1 :
+        Included _ vs (Complement _ (usedVar l1))).
       {
-        intros v1 Hv1.
-        specialize (vs_not_in_sigma1_v v1 Hv1).
-        now inversion vs_not_in_sigma1_v.
+        intros v1 Hv1 Hn.
+        apply (vs_not_in_sigma1 v1); auto.
+        now apply usedVar_STORE_X.
       }
       inversion_clear H as [|
         | i' j' th1 th2 x' R' l1' phi' Hij Hphi H'
