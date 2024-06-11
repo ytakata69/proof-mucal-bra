@@ -772,6 +772,9 @@ Inductive isNormal : ltl -> Prop :=
       isNormal (φ [tt])
   .
 
+Definition env_eq (e1 e2 : Env) :=
+  env_leq e1 e2 /\ env_leq e2 e1.
+
 Section NormalizeOr.
 
 Variables sigma1 sigma2 : eqn_sys.
@@ -785,7 +788,7 @@ Hypothesis EQv3_2 : sigma2 v3 = ((var v1) .\/ (var v2)).
 Hypothesis v1_not_Var_omega : ~ Var_omega v1.
 Hypothesis v2_not_Var_omega : ~ Var_omega v2.
 
-Theorem normalize_or_1 :
+Lemma normalize_or_1 :
   forall l,
   env_leq (Fpow_emp sigma2 l) (Fpow_emp sigma1 l).
 Proof.
@@ -832,7 +835,7 @@ Proof.
       apply H.
 Qed.
 
-Theorem normalize_or_2 :
+Lemma normalize_or_2 :
   forall l,
   env_leq (Fpow_emp sigma1 l) (Fpow_emp sigma2 (2 * l)).
 Proof.
@@ -888,6 +891,22 @@ Proof.
       apply H.
 Qed.
 
+Theorem normalize_or :
+  env_eq (lfpF sigma1) (lfpF sigma2).
+Proof.
+  unfold env_eq.
+  split;
+  unfold env_leq;
+  intros v i j th th' x;
+  rewrite lfpF_is_sup_Fpow;
+  rewrite lfpF_is_sup_Fpow;
+  intros [l H].
+  - exists (2 * l).
+    now apply normalize_or_2.
+  - exists l.
+    now apply normalize_or_1.
+Qed.
+
 End NormalizeOr.
 
 Section NormalizeStoreX.
@@ -903,7 +922,7 @@ Hypothesis EQv3_1 : sigma1 v3 = (↓ R ,X (sigma1 v1) ../\ phi1).
 Hypothesis EQv3_2 : sigma2 v3 = (↓ R ,X (var v1) ../\ phi1).
 Hypothesis v1_not_Var_omega : ~ Var_omega v1.
 
-Theorem normalize_store_X_1 :
+Lemma normalize_store_X_1 :
   forall l,
   env_leq (Fpow_emp sigma2 l) (Fpow_emp sigma1 l).
 Proof.
@@ -948,7 +967,7 @@ Proof.
       apply H.
 Qed.
 
-Theorem normalize_store_X_2 :
+Lemma normalize_store_X_2 :
   forall l,
   env_leq (Fpow_emp sigma1 l) (Fpow_emp sigma2 (2 * l)).
 Proof.
@@ -989,6 +1008,22 @@ Proof.
       apply (models_fin_is_monotonic _ _
         (Fpow_is_monotonic sigma2 (l + l))) in H.
       apply H.
+Qed.
+
+Theorem normalize_store_X :
+  env_eq (lfpF sigma1) (lfpF sigma2).
+Proof.
+  unfold env_eq.
+  split;
+  unfold env_leq;
+  intros v i j th th' x;
+  rewrite lfpF_is_sup_Fpow;
+  rewrite lfpF_is_sup_Fpow;
+  intros [l H].
+  - exists (2 * l).
+    now apply normalize_store_X_2.
+  - exists l.
+    now apply normalize_store_X_1.
 Qed.
 
 End NormalizeStoreX.
