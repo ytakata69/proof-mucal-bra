@@ -772,8 +772,30 @@ Inductive isNormal : ltl -> Prop :=
       isNormal (φ [tt])
   .
 
-Definition env_eq (e1 e2 : Env) :=
-  env_leq e1 e2 /\ env_leq e2 e1.
+Definition env_eq (u1 u2 : Env) : Prop :=
+  env_leq u1 u2 /\ env_leq u2 u1.
+Definition env_eq_on (vs : Ensemble Var)
+  (u1 u2 : Env) : Prop :=
+  forall v, In _ vs v ->
+  forall i j th th' x,
+    u1 v i j th th' x <-> u2 v i j th th' x.
+
+Lemma env_eq_is_env_eq_on_full_set :
+  forall u1 u2,
+  env_eq u1 u2 <-> env_eq_on (Full_set Var) u1 u2.
+Proof.
+  intros u1 u2.
+  split;
+  unfold env_eq, env_eq_on.
+  - intros [H1 H2] v Hv.
+    intros i j th th' x.
+    split; [apply H1 | apply H2].
+  - intros H.
+    split;
+    intros v i j th th' x H';
+    apply (H v); auto;
+    apply Full_intro.
+Qed.
 
 Section NormalizeOr.
 
@@ -1077,14 +1099,13 @@ Hypothesis include_used_var :
   forall v, In _ vars v -> Included _ (usedVar (sigma1 v)) vars.
 
 Lemma unused_var_not_matter :
-  forall ell i j theta theta' x,
-  forall v, In _ vars v ->
-    Fpow_emp sigma1 ell v i j theta theta' x
-    <-> Fpow_emp sigma2 ell v i j theta theta' x.
+  forall l,
+  env_eq_on vars (Fpow_emp sigma1 l) (Fpow_emp sigma2 l).
 Proof.
-  intros ell.
-  induction ell as [| ell IH];
-    intros i j theta theta' x v Hv.
+  intros l.
+  induction l as [| l IH];
+    unfold env_eq_on;
+    intros v Hv i j theta theta' x.
   - (* base case (ell = 0) *)
     unfold Fpow_emp, Fpow.
     reflexivity.
