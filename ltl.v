@@ -760,18 +760,6 @@ Proof.
     now apply F_is_monotonic.
 Qed.
 
-(* Normalized LTL formulas *)
-
-Inductive isNormal : ltl -> Prop :=
-  | isNormal_OR : forall v v' : Var,
-      isNormal (var v .\/ var v')
-  | isNormal_STORE_X :
-      forall R (v : Var) (phi : ltl_phi),
-      isNormal (↓ R ,X (var v) ../\ phi)
-  | isNormal_TT :
-      isNormal (φ [tt])
-  .
-
 Definition env_eq (u1 u2 : Env) : Prop :=
   env_leq u1 u2 /\ env_leq u2 u1.
 Definition env_eq_on (vs : Ensemble Var)
@@ -1050,8 +1038,6 @@ Qed.
 
 End NormalizeStoreX.
 
-End NormalForms.
-
 (* Unused variables are not matter *)
 
 Section UnusedVar.
@@ -1190,3 +1176,16 @@ Proof.
 Qed.
 
 End UnusedVar.
+
+(* Normalized LTL formulas *)
+Inductive isNormal : ltl -> Prop :=
+  | isNormal_OR : forall v v' : Var,
+      isNormal (var v .\/ var v')
+  | isNormal_STORE_X :
+      forall R (v : Var) (phi : ltl_phi),
+      isNormal (↓ R ,X (var v) ../\ phi)
+  | isNormal_TT :
+      isNormal (φ [tt])
+  .
+
+End NormalForms.
