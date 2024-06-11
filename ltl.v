@@ -904,12 +904,10 @@ Qed.
 Theorem normalize_or :
   env_eq (lfpF sigma1) (lfpF sigma2).
 Proof.
-  unfold env_eq.
+  unfold env_eq, env_leq.
   split;
-  unfold env_leq;
   intros v i j th th' x;
-  rewrite lfpF_is_sup_Fpow;
-  rewrite lfpF_is_sup_Fpow;
+  repeat (rewrite lfpF_is_sup_Fpow);
   intros [l H].
   - exists (2 * l).
     now apply normalize_or_2.
@@ -1023,12 +1021,10 @@ Qed.
 Theorem normalize_store_X :
   env_eq (lfpF sigma1) (lfpF sigma2).
 Proof.
-  unfold env_eq.
+  unfold env_eq, env_leq.
   split;
-  unfold env_leq;
   intros v i j th th' x;
-  rewrite lfpF_is_sup_Fpow;
-  rewrite lfpF_is_sup_Fpow;
+  repeat (rewrite lfpF_is_sup_Fpow);
   intros [l H].
   - exists (2 * l).
     now apply normalize_store_X_2.
@@ -1037,6 +1033,92 @@ Proof.
 Qed.
 
 End NormalizeStoreX.
+
+Section NormalizeVar.
+
+Variables sigma1 sigma2 : eqn_sys.
+Variables v1 v3 : Var.
+Hypothesis sigma_equiv :
+  forall v, v <> v3 -> sigma1 v = sigma2 v.
+Hypothesis EQv3_1 : sigma1 v3 = (var v1).
+Hypothesis EQv3_2 : sigma2 v3 = (var v1 .\/ var v1).
+
+Lemma normalize_var_1 :
+  forall l,
+  env_leq (Fpow_emp sigma2 l) (Fpow_emp sigma1 l).
+Proof.
+  intros l.
+  induction l as [| l IHl];
+    unfold env_leq;
+    unfold Fpow_emp, Fpow, F;
+    intros v i j th th' x H.
+  - (* base case *)
+    inversion H.
+  - (* inductive step *)
+    destruct H as [H | H];
+      [left | (right; apply H)].
+    destruct (Var_eq_dec v v3)
+      as [v_eq_v3 | v_neq_v3].
+    + (* when v = v3 *)
+      rewrite v_eq_v3, EQv3_1.
+      rewrite v_eq_v3, EQv3_2 in H.
+      inversion_clear H as [
+        | i' j' th1 th2 x' psi1 psi2 Hij H'
+        | | |].
+      destruct H' as [H' | H'];
+      inversion_clear H' as [i' j' th1 th2 x' v1' Hij' H
+        | | | |];
+      apply models_fin_var; auto;
+      apply IHl, H.
+    + (* when v <> v3 *)
+      rewrite (sigma_equiv _ v_neq_v3).
+      apply (models_fin_is_monotonic _ _ IHl).
+      apply H.
+Qed.
+
+Lemma normalize_var_2 :
+  forall l,
+  env_leq (Fpow_emp sigma1 l) (Fpow_emp sigma2 l).
+Proof.
+  intros l.
+  induction l as [| l IHl];
+    unfold env_leq;
+    unfold Fpow_emp, Fpow, F;
+    intros v i j th th' x H.
+  - (* base case *)
+    inversion H.
+  - (* inductive step *)
+    destruct H as [H | H];
+      [left | (right; apply H)].
+    destruct (Var_eq_dec v v3)
+      as [v_eq_v3 | v_neq_v3].
+    + (* when v = v3 *)
+      rewrite v_eq_v3, EQv3_2.
+      rewrite v_eq_v3, EQv3_1 in H.
+      inversion_clear H as [i' j' th1 th2 x' v1' Hij H'
+        | | | |].
+      apply models_fin_OR; auto;
+      left.
+      apply models_fin_var; auto.
+      apply IHl, H'.
+    + (* when v <> v3 *)
+      rewrite <- (sigma_equiv _ v_neq_v3).
+      apply (models_fin_is_monotonic _ _ IHl).
+      apply H.
+Qed.
+
+Theorem normalize_var :
+  forall l,
+  env_eq (Fpow_emp sigma1 l) (Fpow_emp sigma2 l).
+Proof.
+  unfold env_eq, env_leq.
+  split;
+  intros v i j th th' x.
+  - now apply normalize_var_2.
+  - now apply normalize_var_1.
+Qed.
+
+End NormalizeVar.
 
 (* Unused variables are not matter *)
 
