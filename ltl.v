@@ -547,6 +547,37 @@ Proof.
   now inversion H.
 Qed.
 
+Lemma Fpow_emp_Vtt_implies_x_Vtt_and_th'_th :
+  forall ell x i j theta theta',
+  Fpow_emp sigma ell Vtt i j theta theta' x ->
+  x = Vtt /\ theta = theta'.
+Proof.
+  unfold Fpow_emp.
+  intros ell x.
+  induction ell as [| n IHn];
+    intros i j theta theta' H.
+  - (* base case (ell = 0) *)
+    unfold Fpow in H;
+    inversion H.
+  - (* inductive step (ell = S n) *)
+    inversion H as [Hm | Hm].
+    + (* when (i,theta;j,theta',x |= sigma Vtt) *)
+      rewrite sigma_Vtt in Hm.
+      inversion Hm; split; reflexivity.
+    + (* When Var_omega Vtt /\ x = Vtt *)
+      destruct Hm as [_ [EQxv [_ EQth]]].
+      split; assumption.
+Qed.
+Lemma x_is_Vtt_and_th'_is_th :
+  forall ell x i j theta theta',
+  (i, theta; j, theta', x |= Fpow_emp sigma ell, var Vtt) ->
+  x = Vtt /\ theta = theta'.
+Proof.
+  intros ell x i j theta theta' H.
+  apply Fpow_emp_Vtt_implies_x_Vtt_and_th'_th with ell i j.
+  now inversion H.
+Qed.
+
 End SyntacticalProperties.
 
 (* Equality of two ltl formulas *)
@@ -568,6 +599,28 @@ Proof.
 Qed.
 
 (* Vtt can be seen as the same as tt *)
+Lemma Fpow_Vtt :
+  forall i j theta,
+    i <= j -> u Vtt i j theta theta Vtt.
+Proof.
+  intros i j theta Hij.
+  destruct Hell' as [l Hl].
+  unfold u, Fpow_emp, Fpow.
+  rewrite Hl.
+  left.
+  rewrite sigma_Vtt.
+  apply models_fin_TT.
+  apply Hij.
+Qed.
+Lemma always_models_fin_Vtt :
+  forall i j theta,
+    i <= j ->
+    (i, theta; j, theta, Vtt |= u, var Vtt).
+Proof.
+  intros i j theta Hij.
+  apply models_fin_var; [apply Hij |].
+  now apply Fpow_Vtt.
+Qed.
 Lemma always_models_Vtt :
   forall i theta,
     (i, theta |= u, var Vtt).
@@ -577,31 +630,10 @@ Proof.
   cofix Hcofix.
   intros i.
   apply models_var with (j:=S i) (theta':=theta) (x:=Vtt).
-  - destruct Hell' as [ell' Hell'].
-    unfold u, Fpow_emp, Fpow.
-    rewrite Hell'.
-    left.
-    rewrite sigma_Vtt.
-    apply models_fin_TT.
+  - apply Fpow_Vtt.
     apply Nat.le_succ_diag_r.
   - apply Nat.lt_succ_diag_r.
   - apply Hcofix.
-Qed.
-
-Lemma tt_eq_Vtt :
-  forall i theta,
-    models_phi i theta [tt]
-    <-> (i, theta |= u, var Vtt).
-Proof.
-  intros i theta.
-  split.
-  - (* -> *)
-    intros H.
-    now apply always_models_Vtt.
-  - (* <- *)
-    intros H.
-    apply models_pos.
-    now unfold models_atom.
 Qed.
 
 Lemma phi_eq_xtt_phi :
@@ -759,6 +791,92 @@ Proof.
     unfold Fpow_emp, Fpow.
     now apply F_is_monotonic.
 Qed.
+Lemma eqn_sys_extensionality :
+  forall sigma1 sigma2 : eqn_sys,
+    (forall v : Var, sigma1 v = sigma2 v) ->
+  forall l v i j th th' x,
+    Fpow_emp sigma1 l v i j th th' x <->
+    Fpow_emp sigma2 l v i j th th' x.
+Proof.
+  intros sigma1 sigma2 Hs.
+  intros l.
+  induction l as [| l IH];
+    intros v i j th th' x.
+  - (* base case *)
+    unfold Fpow_emp, Fpow.
+    reflexivity.
+  - (* inductive step *)
+    unfold Fpow_emp, Fpow; fold Fpow.
+    unfold F.
+    rewrite (Hs v).
+    split;
+      intros [H' | H'];
+      [left | right | left | right];
+      auto.
+    + (* -> *)
+      generalize dependent th;
+      generalize dependent i.
+
+      induction (sigma2 v) as [v1 | p1 IH1 p2 IH2
+        | R p1 IH1 phi | phi];
+        intros i th H'.
+      * (* when sigma2 v = var v1 *)
+        inversion_clear H' as [i' j' th1 th2 x' v1' Hij Hf
+          | | | |].
+        apply models_fin_var; auto.
+        apply IH, Hf.
+      * (* when sigma2 v = p1 .\/ p2 *)
+        inversion_clear H' as [| i' j' th1 th2 x' p1' p2' Hij Hf
+          | | |].
+        apply models_fin_OR; auto.
+        destruct Hf as [Hf | Hf];
+        [left | right];
+        [apply IH1 | apply IH2];
+        apply Hf.
+      * (* when sigma2 v = ↓ R,X p1 ../\ phi *)
+        inversion_clear H' as [| |
+          i' j' th1 th2 x' R' p1' phi' Hij Hm Hf | |].
+        apply models_fin_STORE_X; auto.
+      * (* when sigma2 v = φ phi *)
+        inversion_clear H' as [| | |
+          i' j' th1 Hij | i' j' th1 phi' Hphi Hij Hm].
+        -- (* when phi = [tt] *)
+          apply models_fin_TT; auto.
+        -- (* when phi <> [tt] *)
+          apply models_fin_PHI; auto.
+    + (* <- *)
+      generalize dependent th;
+      generalize dependent i.
+
+      induction (sigma2 v) as [v1 | p1 IH1 p2 IH2
+        | R p1 IH1 phi | phi];
+        intros i th H'.
+      * (* when sigma2 v = var v1 *)
+        inversion_clear H' as [i' j' th1 th2 x' v1' Hij Hf
+          | | | |].
+        apply models_fin_var; auto.
+        apply IH, Hf.
+      * (* when sigma2 v = p1 .\/ p2 *)
+        inversion_clear H' as [| i' j' th1 th2 x' p1' p2' Hij Hf
+          | | |].
+        apply models_fin_OR; auto.
+        destruct Hf as [Hf | Hf];
+        [left | right];
+        [apply IH1 | apply IH2];
+        apply Hf.
+      * (* when sigma2 v = ↓ R,X p1 ../\ phi *)
+        inversion_clear H' as [| |
+          i' j' th1 th2 x' R' p1' phi' Hij Hm Hf | |].
+        apply models_fin_STORE_X; auto.
+      * (* when sigma2 v = φ phi *)
+        inversion_clear H' as [| | |
+          i' j' th1 Hij | i' j' th1 phi' Hphi Hij Hm].
+        -- (* when phi = [tt] *)
+          apply models_fin_TT; auto.
+        -- (* when phi <> [tt] *)
+          apply models_fin_PHI; auto.
+Qed.
+
 
 Definition env_eq (u1 u2 : Env) : Prop :=
   env_leq u1 u2 /\ env_leq u2 u1.
@@ -783,6 +901,100 @@ Proof.
     intros v i j th th' x H';
     apply (H v); auto;
     apply Full_intro.
+Qed.
+
+Lemma env_eq_on_is_reflexive :
+  forall vs u, env_eq_on vs u u.
+Proof.
+  unfold env_eq_on.
+  reflexivity.
+Qed.
+Lemma env_eq_on_is_symmetric :
+  forall vs u1 u2,
+  env_eq_on vs u1 u2 -> env_eq_on vs u2 u1.
+Proof.
+  unfold env_eq_on.
+  intros vs u1 u2 H.
+  intros v Hv i j th th' x.
+  rewrite (H v Hv i j th th' x).
+  reflexivity.
+Qed.
+Lemma env_eq_on_is_transitive :
+  forall vs u1 u2 u3,
+  env_eq_on vs u1 u2 -> env_eq_on vs u2 u3 ->
+  env_eq_on vs u1 u3.
+Proof.
+  unfold env_eq_on.
+  intros vs u1 u2 u3 H12 H23.
+  intros v Hv i j th th' x.
+  rewrite (H12 v Hv i j th th' x).
+  rewrite (H23 v Hv i j th th' x).
+  reflexivity.
+Qed.
+
+Lemma env_eq_on_is_monotonic_on_vars :
+  forall (vs1 vs2 : Ensemble Var),
+    Included _ vs1 vs2 ->
+  forall u1 u2,
+    env_eq_on vs2 u1 u2 -> env_eq_on vs1 u1 u2.
+Proof.
+  unfold env_eq_on.
+  intros vs1 vs2 Hvs12 u1 u2 H.
+  intros v Hv i j th th' x.
+  apply Hvs12 in Hv.
+  rewrite (H v Hv i j th th' x).
+  reflexivity.
+Qed.
+Lemma env_eq_implies_env_eq_on :
+  forall vs u1 u2,
+    env_eq u1 u2 -> env_eq_on vs u1 u2.
+Proof.
+  intros vs u1 u2 H.
+  apply env_eq_is_env_eq_on_full_set in H.
+  apply env_eq_on_is_monotonic_on_vars
+    with (vs2:=Full_set Var); auto.
+  unfold Included.
+  intros x Hx.
+  apply Full_intro.
+Qed.
+
+Lemma env_extensionality_for_env_eq :
+  forall (u1 u2 : Env),
+  (forall v i j th th' x, u1 v i j th th' x <-> u2 v i j th th' x)
+  -> env_eq u1 u2.
+Proof.
+  intros u1 u2 H.
+  unfold env_eq, env_leq.
+  split;
+  intros v i j th th' x;
+  apply H.
+Qed.
+
+Lemma env_eq_on_Fpow_implies_env_eq_on_lfpF :
+  forall sigma1 sigma2 vs,
+  (forall l,
+    env_eq_on vs (Fpow_emp sigma1 l) (Fpow_emp sigma2 l)) ->
+    env_eq_on vs (lfpF sigma1) (lfpF sigma2).
+Proof.
+  unfold env_eq_on.
+  intros sigma1 sigma2 vs H.
+  intros v Hv i j th th' x.
+  split;
+    unfold lfpF;
+    intros H';
+    inversion_clear H' as [s u Ha v1 i' j' th1 th2 x' Hu];
+    inversion Ha as [l Hl];
+    rewrite <- Hl in Hu;
+    specialize (H l v Hv i j th th' x);
+    apply H in Hu.
+  - (* -> *)
+    apply env_union_intro with (u:=Fpow_emp sigma2 l);
+    auto.
+    apply all_Fpow_intro.
+  - (* <- *)
+    apply env_union_intro with (u:=Fpow_emp sigma1 l);
+    auto.
+    apply all_Fpow_intro.
 Qed.
 
 Section NormalizeOr.
@@ -1119,6 +1331,124 @@ Proof.
 Qed.
 
 End NormalizeVar.
+
+Section NormalizePhi.
+
+Variables sigma1 sigma2 : eqn_sys.
+Variables v3 : Var.
+Hypothesis sigma_equiv :
+  forall v, v <> v3 -> sigma1 v = sigma2 v.
+Variable phi : ltl_phi.
+Hypothesis EQv3_1 : sigma1 v3 = (φ phi).
+Hypothesis EQv3_2 : sigma2 v3 = (↓ nil,X (var Vtt) ../\ phi).
+
+Lemma normalize_phi_1 :
+  forall l,
+  env_leq (Fpow_emp sigma2 l) (Fpow_emp sigma1 l).
+Proof.
+  intros l.
+  induction l as [| l IHl];
+    unfold env_leq;
+    unfold Fpow_emp, Fpow, F;
+    intros v i j th th' x H.
+  - (* base case *)
+    inversion H.
+  - (* inductive step *)
+    destruct H as [H | H];
+      [left | (right; apply H)].
+    destruct (Var_eq_dec v v3)
+      as [v_eq_v3 | v_neq_v3].
+    + (* when v = v3 *)
+      rewrite v_eq_v3, EQv3_1.
+      rewrite v_eq_v3, EQv3_2 in H.
+      inversion_clear H as [|
+        | i' j' th1 th2 x' R psi' phi' Hij Hm H'
+        | |];
+      unfold updateR in H'.
+
+      apply x_is_Vtt_and_th'_is_th in H' as H''.
+      destruct H'' as [EQx EQth].
+      rewrite EQx, <- EQth.
+      destruct phi as [a | a | p1 p2].
+      * (* when phi = [a] *)
+        destruct a as [| r | a].
+        -- (* when a = tt *)
+          apply models_fin_TT.
+          now apply Nat.lt_le_incl.
+        -- (* when a = ↑ r *)
+          now apply models_fin_PHI.
+        -- (* when a = p a *)
+          now apply models_fin_PHI.
+      * (* when phi = ~[a] *)
+        now apply models_fin_PHI.
+      * (* when phi = p1 ./\ p2 *)
+        now apply models_fin_PHI.
+
+    + (* when v <> v3 *)
+      rewrite (sigma_equiv _ v_neq_v3).
+      apply (models_fin_is_monotonic _ _ IHl).
+      apply H.
+Qed.
+
+Hypothesis phi_not_tt : phi <> [tt].
+
+Lemma normalize_phi_2 :
+  forall l,
+  env_leq (Fpow_emp sigma1 l) (Fpow_emp sigma2 (S l)).
+Proof.
+  intros l.
+  induction l as [| l IHl];
+    unfold env_leq;
+    unfold Fpow_emp, Fpow, F;
+    intros v i j th th' x H.
+  - (* base case *)
+    inversion H.
+  - (* inductive step *)
+    destruct H as [H | H];
+      [left | (right; apply H)].
+    destruct (Var_eq_dec v v3)
+      as [v_eq_v3 | v_neq_v3].
+    + (* when v = v3 *)
+      rewrite v_eq_v3, EQv3_2.
+      rewrite v_eq_v3, EQv3_1 in H.
+      inversion H as [| |
+        | i' j' th1 Hij EQi' EQj' EQth1 EQth' EQx EQphi
+        | i' j' th1 phi' nEQphi Hij Hm
+          EQi' EQj' EQth1 EQth' EQx EQphi'];
+        clear i' EQi' j' EQj' th1 EQth1 EQth' EQx.
+      * (* when phi = [tt] *)
+        symmetry in EQphi.
+        now apply phi_not_tt in EQphi.
+      * (* when phi <> [tt] *)
+        apply models_fin_STORE_X; auto.
+        unfold updateR.
+        apply always_models_fin_Vtt with (ell:=S l).
+        -- (* to show S l >= 1 *)
+          unfold ge.
+          apply le_n_S, Nat.le_0_l.
+        -- (* to show S i <= j *)
+          apply Nat.le_succ_l, Hij.
+    + (* when v <> v3 *)
+      rewrite <- (sigma_equiv _ v_neq_v3).
+      apply (models_fin_is_monotonic _ _ IHl).
+      apply H.
+Qed.
+
+Theorem normalize_phi :
+  env_eq (lfpF sigma1) (lfpF sigma2).
+Proof.
+  unfold env_eq, env_leq.
+  split;
+  intros v i j th th' x;
+  repeat (rewrite lfpF_is_sup_Fpow);
+  intros [l H].
+  - exists (S l).
+    now apply normalize_phi_2.
+  - exists l.
+    now apply normalize_phi_1.
+Qed.
+
+End NormalizePhi.
 
 (* Unused variables are not matter *)
 
