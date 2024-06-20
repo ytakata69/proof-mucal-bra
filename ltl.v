@@ -1600,4 +1600,500 @@ Inductive isNormal : ltl -> Prop :=
       isNormal (φ [tt])
   .
 
+(*
+ * Normalize an LTL formula psi.
+ * maxUsed is the maximum index of already used variables.
+ * Return a pair (psi', newEqs) where psi' is
+ * the normalized formula substituting psi
+ * and newEqs is a list of pair (v1, psi1) representing v1 = psi1.
+ *)
+Definition normalizer
+  (maxUsed : Var) (psi : ltl)
+  : (ltl * list (Var * ltl))%type :=
+  match psi with
+    | (var v1 .\/ var v2)       => (psi, nil)
+    | (↓ R,X (var v1) ../\ phi) => (psi, nil)
+    | (φ [tt])                  => (psi, nil)
+
+    | (var v1) => ((var v1 .\/ var v1), nil)
+    | (psi1 .\/ psi2) =>
+        let v1 := S maxUsed in
+        let v2 := S v1 in
+        ((var v1 .\/ var v2), (v1, psi1) :: (v2, psi2) :: nil)
+    | (↓ R,X psi1 ../\ phi) =>
+        let v1 := S maxUsed in
+        ((↓ R,X (var v1) ../\ phi), (v1, psi1) :: nil)
+    | (φ phi) =>
+        ((↓ nil,X (var Vtt) ../\ phi), nil)
+  end.
+
+(*
+ * Normalize an equation v = sigma v.
+ * maxUsed is the maximum index of already used variables.
+ *)
+Definition normalizedEqnSys (sigma : eqn_sys)
+  (maxUsed : Var) (v : Var) : eqn_sys :=
+  let (psi, newEqs) := normalizer maxUsed (sigma v) in
+  fun (v' : Var) =>
+    if v' =? v then psi
+    else if v' <=? maxUsed then sigma v'
+    else match find (fun p => fst p =? v') newEqs with
+      | Some (_, psi1) => psi1
+      | _ => (var v' .\/ var v')  (* dummy *)
+      end.
+
+
+Variable sigma1 : eqn_sys.
+Variable maxUsed : Var.
+Let used : Ensemble Var :=
+  fun (v : Var) => v <= maxUsed.
+
+Variable v : Var.
+Hypothesis Hv : In _ used v.
+Let sigma2 := normalizedEqnSys sigma1 maxUsed v.
+
+Lemma normalizedEqnSys_normalize :
+  isNormal (sigma2 v).
+Proof.
+  unfold sigma2, normalizedEqnSys, normalizer.
+  destruct (sigma1 v) as [v1 | p1 p2
+    | R p1 phi | phi].
+  - (* when sigma1 v = var v1 *)
+    rewrite (Nat.eqb_refl v).
+    apply isNormal_OR.
+  - (* when sigma1 v = p1 .\/ p2 *)
+    destruct p1 as [v1 | p11 p12
+      | R1 p11 phi1 | phi1];
+      try (rewrite (Nat.eqb_refl v); apply isNormal_OR).
+    (* when p1 = var v1 *)
+    destruct p2 as [v2 | p21 p22
+      | R2 p21 phi2 | phi2];
+      rewrite (Nat.eqb_refl v);
+      apply isNormal_OR.
+  - (* when sigma1 v = ↓ R,X p1 ../\ phi *)
+    destruct p1 as [v1 | p11 p12
+      | R1 p11 phi1 | phi1];
+      rewrite (Nat.eqb_refl v);
+      apply isNormal_STORE_X.
+  - (* when sigma1 v = φ phi *)
+    destruct phi as [a | a | p1 p2];
+      try (rewrite (Nat.eqb_refl v); apply isNormal_STORE_X).
+    destruct a as [| r | a];
+      rewrite (Nat.eqb_refl v);
+      try apply isNormal_STORE_X.
+      apply isNormal_TT.
+Qed.
+
+Lemma normalizedEqnSys_unchange :
+  forall v',
+    v' <> v -> v' <= maxUsed ->
+    sigma1 v' = sigma2 v'.
+Proof.
+  intros v' nEQv' Hv'.
+  apply Nat.eqb_neq in nEQv'.
+  apply Nat.leb_le in Hv'.
+  unfold sigma2, normalizedEqnSys, normalizer.
+  destruct (sigma1 v) as [v1 | p1 p2
+    | R p1 phi | phi].
+  - (* when sigma1 v = var v1 *)
+    now rewrite nEQv', Hv'.
+  - (* when sigma1 v = p1 .\/ p2 *)
+    destruct p1 as [v1 | p11 p12
+      | R1 p11 phi1 | phi1];
+      try rewrite nEQv', Hv'; auto.
+    (* when p1 = var v1 *)
+    destruct p2 as [v2 | p21 p22
+      | R2 p21 phi2 | phi2];
+      now rewrite nEQv', Hv'.
+  - (* when sigma1 v = ↓ R,X p1 ../\ phi *)
+    destruct p1 as [v1 | p11 p12
+      | R1 p11 phi1 | phi1];
+      now rewrite nEQv', Hv'.
+  - (* when sigma1 v = φ phi *)
+    destruct phi as [a | a | p1 p2];
+      try rewrite nEQv', Hv'; auto.
+    destruct a as [| r | a];
+      now rewrite nEQv', Hv'.
+Qed.
+Lemma normalizedEqnSys_unchange_already_normal :
+  isNormal (sigma1 v) ->
+  forall v',
+    v' <= maxUsed -> sigma1 v' = sigma2 v'.
+Proof.
+  intros Hn v' Hv'.
+  apply Nat.leb_le in Hv'.
+  remember (sigma1 v) as sv eqn: EQsv.
+
+  destruct (Var_eq_dec v' v) as [EQv' | EQv'];
+    [ apply Nat.eqb_eq  in EQv' as EQv'b
+    | apply Nat.eqb_neq in EQv' as EQv'b];
+
+  destruct Hn as [v1 v2 | R v1 phi |];
+    unfold sigma2;
+    unfold normalizedEqnSys, normalizer;
+    rewrite <- EQsv, Hv', EQv'b;
+    try reflexivity;
+    now rewrite EQsv, EQv'.
+Qed.
+
+
+
+Let sigma3 : eqn_sys :=
+  fun (v : Var) =>
+  if v <=? maxUsed then sigma1 v
+  else sigma2 v.
+
+Hypothesis Hused :
+  forall v, In _ used v ->
+  Included _ (usedVar (sigma1 v)) used.
+
+
+Lemma sigma1_eq_sigma3 :
+  env_eq_on used (lfpF sigma1) (lfpF sigma3).
+Proof.
+  apply env_eq_on_Fpow_implies_env_eq_on_lfpF.
+  apply unused_var_not_matter;
+  auto.
+  intros v' Hv'.
+  unfold used, In in Hv'.
+  apply leb_correct in Hv'.
+  unfold sigma3.
+  rewrite Hv'.
+  reflexivity.
+Qed.
+
+Lemma sigma3_eq_sigma2_except_v :
+  forall v', v' <> v -> sigma3 v' = sigma2 v'.
+Proof.
+  intros v' nEQv'.
+  unfold sigma3.
+  case_eq (v' <=? maxUsed);
+  intros Hv'; [| reflexivity].
+  (* when v' <= maxUsed *)
+  apply Nat.leb_le in Hv'.
+  now apply normalizedEqnSys_unchange.
+Qed.
+
+Lemma sigma3_eq_sigma2_if_already_normal :
+  isNormal (sigma1 v) ->
+  forall v', sigma3 v' = sigma2 v'.
+Proof.
+  intros Hn v'.
+  unfold sigma3.
+  case_eq (v' <=? maxUsed);
+    intros Hv'; [| reflexivity].
+  (* when v' <= maxUsed *)
+  apply Nat.leb_le in Hv'.
+  now apply normalizedEqnSys_unchange_already_normal.
+Qed.
+
+
+Hypothesis unused_is_not_Var_omega :
+  forall v, ~ In _ used v -> ~ Var_omega v.
+
+Lemma sigma3_eq_sigma2 :
+  env_eq_on used (lfpF sigma3) (lfpF sigma2).
+Proof.
+  unfold used, In in Hv.  (* Hv: v <= maxUsed *)
+  apply Nat.leb_le in Hv as Hvb.  (* Hvb: v <=? maxUsed *)
+  assert (nEQmu1: S maxUsed <> v).
+  {
+    intros EQv.
+    rewrite <- EQv in Hv.
+    now apply Nat.nle_succ_diag_l in Hv.
+  }
+  assert (nEQmu2: S (S maxUsed) <> v).
+  {
+    intros EQv.
+    rewrite <- EQv in Hv.
+    rewrite Nat.le_succ_l in Hv.
+    now apply Nat.nlt_succ_diag_l in Hv.
+  }
+  assert (nEQmu12b := Nat.neq_succ_diag_r (S maxUsed)).
+  apply Nat.eqb_neq in nEQmu12b.
+  apply Nat.eqb_neq in nEQmu1 as nEQmu1b.
+  apply Nat.eqb_neq in nEQmu2 as nEQmu2b.
+  assert (nLEmu1 := Nat.nle_succ_diag_l maxUsed).
+  apply Nat.leb_nle in nLEmu1.
+  assert (nLEmu2 := Nat.nlt_succ_diag_l maxUsed).
+  rewrite <- Nat.le_succ_l in nLEmu2.
+  apply Nat.leb_nle in nLEmu2.
+
+  assert (Heqsigma := sigma3_eq_sigma2_except_v).
+  assert (nVo1 : ~ Var_omega (S maxUsed)).
+  {
+    apply unused_is_not_Var_omega.
+    unfold used, In.
+    apply Nat.nle_succ_diag_l.
+  }
+  assert (nVo2 : ~ Var_omega (S (S maxUsed))).
+  {
+    apply unused_is_not_Var_omega.
+    unfold used, In.
+    rewrite Nat.le_succ_l.
+    apply Nat.nlt_succ_diag_l.
+  }
+
+  apply env_eq_implies_env_eq_on.
+  remember (sigma1 v) as sv eqn: EQsv.
+  destruct (sv) as [v1 | p1 p2 | R p1 phi | phi];
+    clear sv; symmetry in EQsv.
+  - (* when sigma1 = var v1 *)
+    apply env_eq_is_env_eq_on_full_set,
+          env_eq_on_Fpow_implies_env_eq_on_lfpF;
+    intros l;
+    apply env_eq_is_env_eq_on_full_set.
+    apply normalize_var with (v3:=v) (v1:=v1).
+    + (* to show forall v', v' <> v -> sigma3 v' = sigma2 v' *)
+      apply sigma3_eq_sigma2_except_v.
+    + (* to show sigma3 v = var v1 *)
+      unfold sigma3.
+      now rewrite Hvb.
+    + (* to show sigma2 v = (var v1 .\/ var v1) *)
+      unfold sigma2, normalizedEqnSys, normalizer.
+      rewrite EQsv.
+      now rewrite (Nat.eqb_refl v).
+
+  - (* when sigma1 v = p1 .\/ p2 *)
+    destruct p1 as [v11 | p11 p12 | R1 p11 phi1 | phi1].
+    + (* when p1 = var v11 *)
+      destruct p2 as [v21 | p21 p22 | R2 p21 phi2 | phi2].
+      * (* when p2 = var v21 *)
+        assert (Hn : isNormal (sigma1 v)).
+        {
+          rewrite EQsv; apply isNormal_OR.
+        }
+        apply env_eq_is_env_eq_on_full_set,
+              env_eq_on_Fpow_implies_env_eq_on_lfpF;
+        intros l;
+        apply env_eq_is_env_eq_on_full_set.
+        apply env_extensionality_for_env_eq,
+              eqn_sys_extensionality.
+        (* to show forall v', sigma3 v' = sigma2 v' *)
+        intros v'.
+        destruct (Var_eq_dec v' v) as [EQv' | nEQv'].
+        -- (* when v' = v *)
+          rewrite EQv'.
+          now apply sigma3_eq_sigma2_if_already_normal.
+        -- (* when v' <> v *)
+          now apply sigma3_eq_sigma2_except_v.
+      * (* when p2 = p21 .\/ p22 *)
+        apply normalize_or with
+          (v1:=S maxUsed) (v2:=S (S maxUsed)) (v3:=v);
+          auto.
+        -- (* to show sigma3 v = sigma3 (...) .\/ sigma3 (...) *)
+          unfold sigma3, sigma2, normalizedEqnSys, normalizer.
+          rewrite EQsv, Hvb, nLEmu1, nLEmu2, nEQmu1b, nEQmu2b.
+          unfold find, fst.
+          rewrite (Nat.eqb_refl (S maxUsed)).
+          rewrite (Nat.eqb_refl (S (S maxUsed))).
+          now rewrite nEQmu12b.
+        -- (* to show sigma2 v = (var (...) .\/ var (...)) *)
+          unfold sigma2, normalizedEqnSys, normalizer.
+          rewrite EQsv.
+          now rewrite (Nat.eqb_refl v).
+
+      * (* when p2 = ↓ R2,X p21 ../\ phi2 *)
+        apply normalize_or with
+          (v1:=S maxUsed) (v2:=S (S maxUsed)) (v3:=v);
+          auto.
+        -- (* to show sigma3 v = sigma3 (...) .\/ sigma3 (...) *)
+          unfold sigma3, sigma2, normalizedEqnSys, normalizer.
+          rewrite EQsv, Hvb, nLEmu1, nLEmu2, nEQmu1b, nEQmu2b.
+          unfold find, fst.
+          rewrite (Nat.eqb_refl (S maxUsed)).
+          rewrite (Nat.eqb_refl (S (S maxUsed))).
+          now rewrite nEQmu12b.
+        -- (* to show sigma2 v = (var (...) .\/ var (...)) *)
+          unfold sigma2, normalizedEqnSys, normalizer.
+          rewrite EQsv.
+          now rewrite (Nat.eqb_refl v).
+
+      * (* when p2 = φ phi2 *)
+        apply normalize_or with
+          (v1:=S maxUsed) (v2:=S (S maxUsed)) (v3:=v);
+          auto.
+        -- (* to show sigma3 v = sigma3 (...) .\/ sigma3 (...) *)
+          unfold sigma3, sigma2, normalizedEqnSys, normalizer.
+          rewrite EQsv, Hvb, nLEmu1, nLEmu2, nEQmu1b, nEQmu2b.
+          unfold find, fst.
+          rewrite (Nat.eqb_refl (S maxUsed)).
+          rewrite (Nat.eqb_refl (S (S maxUsed))).
+          now rewrite nEQmu12b.
+        -- (* to show sigma2 v = (var (...) .\/ var (...)) *)
+          unfold sigma2, normalizedEqnSys, normalizer.
+          rewrite EQsv.
+          now rewrite (Nat.eqb_refl v).
+
+    + (* when p1 = p11 .\/ p12 *)
+        apply normalize_or with
+          (v1:=S maxUsed) (v2:=S (S maxUsed)) (v3:=v);
+          auto.
+        -- (* to show sigma3 v = sigma3 (...) .\/ sigma3 (...) *)
+          unfold sigma3, sigma2, normalizedEqnSys, normalizer.
+          rewrite EQsv, Hvb, nLEmu1, nLEmu2, nEQmu1b, nEQmu2b.
+          unfold find, fst.
+          rewrite (Nat.eqb_refl (S maxUsed)).
+          rewrite (Nat.eqb_refl (S (S maxUsed))).
+          now rewrite nEQmu12b.
+        -- (* to show sigma2 v = (var (...) .\/ var (...)) *)
+          unfold sigma2, normalizedEqnSys, normalizer.
+          rewrite EQsv.
+          now rewrite (Nat.eqb_refl v).
+
+    + (* when p1 = ↓ R1,X p11 ../\ phi1 *)
+        apply normalize_or with
+          (v1:=S maxUsed) (v2:=S (S maxUsed)) (v3:=v);
+          auto.
+        -- (* to show sigma3 v = sigma3 (...) .\/ sigma3 (...) *)
+          unfold sigma3, sigma2, normalizedEqnSys, normalizer.
+          rewrite EQsv, Hvb, nLEmu1, nLEmu2, nEQmu1b, nEQmu2b.
+          unfold find, fst.
+          rewrite (Nat.eqb_refl (S maxUsed)).
+          rewrite (Nat.eqb_refl (S (S maxUsed))).
+          now rewrite nEQmu12b.
+        -- (* to show sigma2 v = (var (...) .\/ var (...)) *)
+          unfold sigma2, normalizedEqnSys, normalizer.
+          rewrite EQsv.
+          now rewrite (Nat.eqb_refl v).
+
+    + (* when p1 = φ phi1 *)
+        apply normalize_or with
+          (v1:=S maxUsed) (v2:=S (S maxUsed)) (v3:=v);
+          auto.
+        -- (* to show sigma3 v = sigma3 (...) .\/ sigma3 (...) *)
+          unfold sigma3, sigma2, normalizedEqnSys, normalizer.
+          rewrite EQsv, Hvb, nLEmu1, nLEmu2, nEQmu1b, nEQmu2b.
+          unfold find, fst.
+          rewrite (Nat.eqb_refl (S maxUsed)).
+          rewrite (Nat.eqb_refl (S (S maxUsed))).
+          now rewrite nEQmu12b.
+        -- (* to show sigma2 v = (var (...) .\/ var (...)) *)
+          unfold sigma2, normalizedEqnSys, normalizer.
+          rewrite EQsv.
+          now rewrite (Nat.eqb_refl v).
+
+  - (* when sigma1 v = ↓ R,X p1 ../\ phi *)
+    destruct p1 as [v11 | p11 p12 | R1 p11 phi1 | phi1].
+    + (* when p1 = var v11 *)
+        assert (Hn : isNormal (sigma1 v)).
+        {
+          rewrite EQsv; apply isNormal_STORE_X.
+        }
+        apply env_eq_is_env_eq_on_full_set,
+              env_eq_on_Fpow_implies_env_eq_on_lfpF;
+        intros l;
+        apply env_eq_is_env_eq_on_full_set.
+        apply env_extensionality_for_env_eq,
+              eqn_sys_extensionality.
+        (* to show forall v', sigma3 v' = sigma2 v' *)
+        intros v'.
+        destruct (Var_eq_dec v' v) as [EQv' | nEQv'].
+        -- (* when v' = v *)
+          rewrite EQv'.
+          now apply sigma3_eq_sigma2_if_already_normal.
+        -- (* when v' <> v *)
+          now apply sigma3_eq_sigma2_except_v.
+
+    + (* when p1 = p11 .\/ p12 *)
+        apply normalize_store_X with
+          (v1:=S maxUsed) (v3:=v) (R:=R) (phi1:=phi);
+          auto.
+        -- (* to show sigma3 v = ↓ R,X sigma3 (...) ../\ phi *)
+          unfold sigma3, sigma2, normalizedEqnSys, normalizer.
+          rewrite EQsv, Hvb, nLEmu1, nEQmu1b.
+          unfold find, fst.
+          now rewrite (Nat.eqb_refl (S maxUsed)).
+        -- (* to show sigma2 v = (var (...) .\/ var (...)) *)
+          unfold sigma2, normalizedEqnSys, normalizer.
+          rewrite EQsv.
+          now rewrite (Nat.eqb_refl v).
+    + (* when p1 = ↓ R1,X p11 ../\ phi1 *)
+        apply normalize_store_X with
+          (v1:=S maxUsed) (v3:=v) (R:=R) (phi1:=phi);
+          auto.
+        -- (* to show sigma3 v = ↓ R,X sigma3 (...) ../\ phi *)
+          unfold sigma3, sigma2, normalizedEqnSys, normalizer.
+          rewrite EQsv, Hvb, nLEmu1, nEQmu1b.
+          unfold find, fst.
+          now rewrite (Nat.eqb_refl (S maxUsed)).
+        -- (* to show sigma2 v = (var (...) .\/ var (...)) *)
+          unfold sigma2, normalizedEqnSys, normalizer.
+          rewrite EQsv.
+          now rewrite (Nat.eqb_refl v).
+    + (* when p1 = φ phi1 *)
+        apply normalize_store_X with
+          (v1:=S maxUsed) (v3:=v) (R:=R) (phi1:=phi);
+          auto.
+        -- (* to show sigma3 v = ↓ R,X sigma3 (...) ../\ phi *)
+          unfold sigma3, sigma2, normalizedEqnSys, normalizer.
+          rewrite EQsv, Hvb, nLEmu1, nEQmu1b.
+          unfold find, fst.
+          now rewrite (Nat.eqb_refl (S maxUsed)).
+        -- (* to show sigma2 v = (var (...) .\/ var (...)) *)
+          unfold sigma2, normalizedEqnSys, normalizer.
+          rewrite EQsv.
+          now rewrite (Nat.eqb_refl v).
+
+  - (* when sigma1 v = φ phi *)
+    destruct phi as [a | a | p1 p2].
+    + (* when phi = [a] *)
+      destruct a as [| r | a].
+      * (* when a = tt *)
+        assert (Hn : isNormal (sigma1 v)).
+        {
+          rewrite EQsv; apply isNormal_TT.
+        }
+        apply env_eq_is_env_eq_on_full_set,
+              env_eq_on_Fpow_implies_env_eq_on_lfpF;
+        intros l;
+        apply env_eq_is_env_eq_on_full_set.
+        apply env_extensionality_for_env_eq,
+              eqn_sys_extensionality.
+        (* to show forall v', sigma3 v' = sigma2 v' *)
+        intros v'.
+        destruct (Var_eq_dec v' v) as [EQv' | nEQv'].
+        -- (* when v' = v *)
+          rewrite EQv'.
+          now apply sigma3_eq_sigma2_if_already_normal.
+        -- (* when v' <> v *)
+          now apply sigma3_eq_sigma2_except_v.
+      * (* when a = ↑ r *)
+        apply normalize_phi with (v3:=v) (phi:=[↑ r]);
+          auto.
+        -- unfold sigma3; now rewrite Hvb.
+        -- unfold sigma2, normalizedEqnSys, normalizer.
+          now rewrite EQsv, (Nat.eqb_refl v).
+        -- intros H; inversion H.
+      * (* when a = p a *)
+        apply normalize_phi with (v3:=v) (phi:=[p a]);
+          auto.
+        -- unfold sigma3; now rewrite Hvb.
+        -- unfold sigma2, normalizedEqnSys, normalizer.
+          now rewrite EQsv, (Nat.eqb_refl v).
+        -- intros H; inversion H.
+    + (* when phi = ~[a] *)
+      apply normalize_phi with (v3:=v) (phi:=~[a]);
+        auto.
+      -- unfold sigma3; now rewrite Hvb.
+      -- unfold sigma2, normalizedEqnSys, normalizer.
+        now rewrite EQsv, (Nat.eqb_refl v).
+      -- intros H; inversion H.
+    + (* when phi = p1 ./\ p2 *)
+      apply normalize_phi with (v3:=v) (phi:=p1 ./\ p2);
+        auto.
+      -- unfold sigma3; now rewrite Hvb.
+      -- unfold sigma2, normalizedEqnSys, normalizer.
+        now rewrite EQsv, (Nat.eqb_refl v).
+      -- intros H; inversion H.
+Qed.
+
+Theorem normalizedEqnSys_equiv :
+  env_eq_on used (lfpF sigma1) (lfpF sigma2).
+Proof.
+  apply env_eq_on_is_transitive with (u2:=lfpF sigma3).
+  - apply sigma1_eq_sigma3.
+  - apply sigma3_eq_sigma2.
+Qed.
+
 End NormalForms.
